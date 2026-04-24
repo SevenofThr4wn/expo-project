@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from app.models.log_store import get_events, get_today_count, clear_events
-from app.models.face_store import get_enrolled_count
+from app.stores.log_store import get_events, get_today_count, clear_events
+from app.stores.face_store import get_enrolled_count
 
 logs_bp = Blueprint("logs", __name__)
 

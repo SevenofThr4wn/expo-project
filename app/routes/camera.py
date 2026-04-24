@@ -1,7 +1,7 @@
 from flask import Blueprint, Response
 import cv2
 from app.services.face_service import detect_faces, match_face
-from app.models.face_store import load_data
+from app.stores.face_store import load_data
 
 camera_bp = Blueprint("camera", __name__)
 cam = cv2.VideoCapture(0)

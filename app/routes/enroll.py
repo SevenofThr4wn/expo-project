@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import face_recognition
-from app.models.face_store import add_face
+from app.stores.face_store import add_face
 from app.services.recognition_service import get_recognizer
 
 enroll_bp = Blueprint("enroll", __name__)

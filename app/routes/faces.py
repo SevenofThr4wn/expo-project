@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from app.models.face_store import list_names, delete_face
+from app.stores.face_store import list_names, delete_face
 from app.services.recognition_service import get_recognizer
 
 faces_bp = Blueprint("faces", __name__)

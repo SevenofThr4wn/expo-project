@@ -4,7 +4,7 @@ import numpy as np
 import logging
 import time
 
-from app.models.face_store import load_data
+from app.stores.face_store import load_data
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class RecognitionService:
         logger.info("Face data reloaded")
 
     def process_frame(self, frame):
-        from app.models.log_store import add_event
+        from app.stores.log_store import add_event
 
         rgb = frame[:, :, ::-1]
         boxes = face_recognition.face_locations(rgb)
