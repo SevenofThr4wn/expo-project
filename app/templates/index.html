@@ -30,6 +30,10 @@
                 <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 14.094A5.973 5.973 0 004 17v1H1v-1a3 3 0 013.75-2.906z"/></svg>
                 <span class="nav-label">Enrolled Faces</span>
             </li>
+            <li class="nav-item" data-tab="train">
+                <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/></svg>
+                <span class="nav-label">Training</span>
+            </li>
             <li class="nav-item" data-tab="settings">
                 <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
                 <span class="nav-label">Settings</span>
@@ -63,8 +67,8 @@
             </div>
             <div class="stat-divider"></div>
             <div class="stat-card">
-                <div class="stat-dot online" id="statusDot"></div>
-                <div class="stat-label">System Online</div>
+                <div class="stat-dot" id="cameraDot"></div>
+                <div class="stat-label" id="cameraLabel">Camera</div>
             </div>
         </div>
 
@@ -145,6 +149,58 @@
             </div>
         </div>
 
+        <!-- TAB: TRAINING -->
+        <div class="tab-pane" id="tab-train">
+            <div class="train-layout">
+
+                <div class="train-controls">
+
+                    <div class="panel-card">
+                        <h3 class="card-title">Bulk Image Upload</h3>
+                        <p class="train-hint">Upload multiple photos of the same person to build a stronger model. More varied images (angles, lighting) improve accuracy.</p>
+                        <input type="text" id="bulkName" placeholder="Person's name" class="input-field">
+                        <input type="file" id="bulkFiles" accept="image/*" multiple class="file-input" style="margin-bottom:9px">
+                        <button id="bulkTrainBtn" class="btn btn-primary">Train from Images</button>
+                        <div id="bulkStatus" class="status-msg"></div>
+                    </div>
+
+                    <div class="panel-card">
+                        <h3 class="card-title">Live Capture Session</h3>
+                        <p class="train-hint">Auto-captures frames from the live feed. Move your head slightly between captures for best results.</p>
+                        <input type="text" id="sessionName" placeholder="Person's name" class="input-field">
+                        <div class="frames-row">
+                            <span class="setting-hint" style="flex:1">Frames to capture</span>
+                            <input type="number" id="frameCount" min="3" max="20" value="8" class="input-field frames-input">
+                        </div>
+                        <button id="startSessionBtn" class="btn btn-primary">Start Capture Session</button>
+                        <div id="captureProgress" class="capture-progress" style="display:none">
+                            <div id="captureProgressText" class="capture-progress-text"></div>
+                            <div class="progress-track">
+                                <div id="captureProgressFill" class="progress-fill" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div id="sessionStatus" class="status-msg"></div>
+                    </div>
+
+                </div>
+
+                <div class="train-main">
+                    <div class="tab-header" style="padding-left:0;padding-top:18px">
+                        <h2>Training Status</h2>
+                        <button id="refreshTrainBtn" class="btn btn-ghost btn-sm">Refresh</button>
+                    </div>
+                    <div class="train-legend">
+                        <span class="quality-badge quality-weak">Weak</span><span class="legend-text">1 encoding</span>
+                        <span class="quality-badge quality-fair">Fair</span><span class="legend-text">2–3</span>
+                        <span class="quality-badge quality-good">Good</span><span class="legend-text">4–7</span>
+                        <span class="quality-badge quality-strong">Strong</span><span class="legend-text">8+</span>
+                    </div>
+                    <div id="trainStatusBody"></div>
+                </div>
+
+            </div>
+        </div>
+
         <!-- TAB: SETTINGS -->
         <div class="tab-pane settings-pane" id="tab-settings">
             <h2>Settings</h2>
@@ -162,6 +218,23 @@
                 </div>
                 <button id="saveSettingsBtn" class="btn btn-primary btn-fixed">Save Settings</button>
                 <div id="settingsStatus" class="status-msg"></div>
+            </div>
+
+            <div class="settings-card">
+                <div class="setting-label">Camera Device</div>
+                <div class="setting-hint" style="margin-bottom:12px">Select which camera to use. Phones connected via USB or Microsoft Phone Link appear as virtual devices — click Scan to detect them.</div>
+                <div class="camera-row">
+                    <select id="cameraSelect" class="input-field camera-select">
+                        <option value="">-- Click Scan to detect cameras --</option>
+                    </select>
+                    <button id="scanCamerasBtn" class="btn btn-ghost btn-sm">Scan</button>
+                </div>
+                <div class="camera-status-row">
+                    <div id="cameraDot2" class="stat-dot"></div>
+                    <span id="cameraStatusText" class="setting-hint">&nbsp;</span>
+                </div>
+                <button id="applyCameraBtn" class="btn btn-primary btn-fixed" style="margin-top:12px">Apply Camera</button>
+                <div id="cameraMsg" class="status-msg"></div>
             </div>
 
             <div class="settings-card">

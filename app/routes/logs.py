@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from app.stores.log_store import get_events, get_today_count, clear_events
 from app.stores.face_store import get_enrolled_count
+from app.services.camera_service import get_camera
 
 logs_bp = Blueprint("logs", __name__)
 
@@ -18,9 +19,11 @@ def clear_log():
 
 @logs_bp.route('/stats')
 def get_stats():
+    cam = get_camera()
     return jsonify({
-        "enrolled_count": get_enrolled_count(),
+        "enrolled_count":    get_enrolled_count(),
         "today_recognitions": get_today_count(),
+        "camera_connected":  cam.connected,
     })
 
 

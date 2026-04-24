@@ -14,17 +14,23 @@ A real-time facial recognition and access control system with a web-based dashbo
 
 FaceID System is a full-stack facial recognition application that lets you enroll faces, stream live video with real-time recognition, and log access events — all from a browser. It is built to run on a Raspberry Pi with a USB webcam, making it suitable for physical access control or identity verification scenarios.
 
+On first launch with no data, the system skips authentication entirely and opens the dashboard directly so you can enroll faces straight away.
+
 ## Features
 
 | Feature | Description |
 |---|---|
+| **First-run bypass** | No login required when no authorized faces are enrolled — opens the dashboard immediately |
 | **Live Video Feed** | MJPEG stream with real-time bounding boxes (green = known, red = unknown) |
-| **Face Enrollment** | Upload an image to register a new person by name |
+| **Face Enrollment** | Upload an image or capture directly from the live webcam feed to register a person by name |
+| **Webcam Snapshot** | One-click capture from the live feed for enrollment — no separate photo needed |
 | **Face Authentication** | Session-based face-login that validates identity against enrolled encodings |
 | **Activity Logging** | Persistent JSON log of every recognition event with timestamp and confidence score |
 | **Face Management** | View, list, and delete enrolled faces from the dashboard |
-| **Adjustable Tolerance** | Tune the recognition confidence threshold (0.3–0.7) via the settings panel |
-| **Statistics** | Live count of enrolled faces, recognitions today, and system status |
+| **Bulk Training** | Upload multiple images at once to improve recognition accuracy for a person |
+| **Camera Selection** | Detect and hot-swap between available camera devices from the Settings panel |
+| **Adjustable Tolerance** | Tune the recognition confidence threshold (0.3–0.7) via the Settings panel |
+| **Statistics** | Live count of enrolled faces, recognitions today, and camera connection status |
 
 ## Tech Stack
 
@@ -49,37 +55,37 @@ FaceID System is a full-stack facial recognition application that lets you enrol
 ```
 project/
 ├── app/
-│   ├── __init__.py              # App factory and blueprint registration
 │   ├── auth/
-│   │   └── face_auth.py         # Authentication logic
+│   │   └── face_auth.py             # Session authentication against authorized_faces/
 │   ├── routes/
-│   │   ├── auth.py              # POST /face-login
-│   │   ├── enroll.py            # POST /enroll
-│   │   ├── recognize.py         # GET  /video, /snapshot, /reload
-│   │   ├── faces.py             # GET/DELETE /faces
-│   │   └── logs.py              # GET /log, /stats, /settings
+│   │   ├── auth.py                  # GET  /face-login
+│   │   ├── cameras.py               # GET  /cameras, POST /cameras/select
+│   │   ├── enroll.py                # POST /enroll
+│   │   ├── faces.py                 # GET/DELETE /faces, /faces/<name>
+│   │   ├── logs.py                  # GET /log, /stats — DELETE /log — POST /settings
+│   │   ├── recognize.py             # GET  /video, /snapshot, /reload
+│   │   └── train.py                 # POST /train — GET /train/status
 │   ├── services/
-│   │   ├── camera_service.py    # Camera I/O and frame streaming
-│   │   ├── recognition_service.py # Face matching and annotation
-│   │   └── face_service.py      # Face detection utilities
+│   │   ├── camera_service.py        # Camera I/O, frame streaming, placeholder frame
+│   │   ├── face_service.py          # Face detection utilities
+│   │   ├── recognition_service.py   # Face matching, annotation, event throttling
+│   │   └── training_service.py      # Bulk image processing for training
 │   ├── stores/
-│   │   ├── face_store.py        # Pickle-based face encoding persistence
-│   │   └── log_store.py         # JSON-based recognition event log
+│   │   ├── face_store.py            # Pickle-based face encoding persistence
+│   │   └── log_store.py             # Thread-safe JSON recognition event log
 │   ├── static/
-│   │   ├── css/styles.css
+│   │   ├── css/styles.css           # Dark theme design system
 │   │   └── js/
-│   │       ├── api.js           # API client wrapper
-│   │       └── main.js          # Dashboard logic and tab navigation
+│   │       ├── api.js               # Fetch-based API client
+│   │       └── main.js              # Tab navigation, polling, all UI handlers
 │   ├── templates/
-│   │   ├── index.html           # Main dashboard
-│   │   └── login.html           # Face login screen
-│   └── data/                    # Runtime data (gitignored)
-│       ├── encodings.pkl
-│       ├── recognition_log.json
-│       └── authorized_faces/
-├── docs/
-│   └── setup.md                 # Raspberry Pi deployment guide
-├── run.py                       # Flask entry point
+│   │   ├── index.html               # Main dashboard (Live / Log / Faces / Training / Settings)
+│   │   └── login.html               # Face authentication screen
+│   └── data/                        # Runtime data (gitignored)
+│       ├── encodings.pkl            # Enrolled face encodings
+│       ├── recognition_log.json     # Persisted activity log
+│       └── authorized_faces/        # Images used for login (organised by person name)
+├── run.py                           # Flask entry point
 ├── requirements.txt
 └── Dockerfile
 ```
@@ -129,27 +135,34 @@ sudo docker run -p 5000:5000 --device=/dev/video0 johneley/johns-private-repo:la
 
 ## Usage
 
-1. **Login** — Navigate to `http://<device-ip>:5000`. You will be prompted for face authentication.
-2. **Enroll a face** — Go to the **Enroll** panel, enter a name, upload a clear photo, and submit.
-3. **Live feed** — The **Live Feed** tab streams real-time video with name labels and confidence scores.
-4. **Activity log** — The **Activity Log** tab shows a timestamped history of every recognition event.
-5. **Manage faces** — The **Enrolled Faces** tab lets you view and delete registered people.
-6. **Settings** — Adjust the recognition tolerance slider to trade off precision vs. recall.
+1. **First launch** — If no authorized faces are enrolled, the dashboard opens immediately with no login prompt. Use this opportunity to enroll faces.
+2. **Enroll a face** — On the **Live Feed** tab, enter a name and either upload a photo or click **Capture** to grab a frame from the webcam, then click **Enroll Face**.
+3. **Improve accuracy** — Use the **Training** tab to upload multiple images of the same person and build a richer encoding set.
+4. **Live feed** — The **Live Feed** tab streams real-time video with name labels and confidence scores overlaid on each detected face.
+5. **Activity log** — The **Activity Log** tab shows a timestamped history of every recognition event (deduplicated to once per 8 seconds per person).
+6. **Manage faces** — The **Enrolled Faces** tab lets you view and remove registered people.
+7. **Settings** — Adjust the recognition tolerance slider, select a camera device, or clear the activity log.
+8. **Login (once faces are enrolled)** — Place authorized face images in `app/data/authorized_faces/<name>/` and restart. From then on, the system requires face authentication on every visit.
 
 ## API Reference
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/face-login` | Authenticate via uploaded image |
-| `POST` | `/enroll` | Enroll a new face |
-| `GET` | `/video` | MJPEG video stream |
-| `GET` | `/snapshot` | Capture a single frame |
-| `GET` | `/reload` | Reload face encodings from disk |
-| `GET` | `/faces` | List all enrolled faces |
-| `DELETE` | `/faces/<name>` | Remove an enrolled face |
-| `GET` | `/log` | Retrieve recognition log |
-| `GET` | `/stats` | System statistics |
-| `POST` | `/settings` | Update recognition settings |
+| `GET` | `/face-login` | Authenticate the current camera frame against authorized faces |
+| `POST` | `/enroll` | Enroll a new face (`name` + `image` form fields) |
+| `GET` | `/video` | MJPEG video stream with recognition overlays |
+| `GET` | `/snapshot` | Capture a single JPEG frame from the camera |
+| `GET` | `/reload` | Reload face encodings from disk into memory |
+| `GET` | `/faces` | List all enrolled face names |
+| `DELETE` | `/faces/<name>` | Remove all encodings for a person |
+| `GET` | `/log` | Retrieve the recognition event log (last 50 entries) |
+| `DELETE` | `/log` | Clear all log entries |
+| `GET` | `/stats` | System statistics (enrolled count, today's recognitions, camera status) |
+| `POST` | `/settings` | Update recognition tolerance at runtime |
+| `GET` | `/cameras` | List available camera device indices |
+| `POST` | `/cameras/select` | Switch the active camera device |
+| `POST` | `/train` | Submit multiple images for bulk training |
+| `GET` | `/train/status` | Check the status of an in-progress training job |
 
 ## Configuration
 
@@ -157,13 +170,24 @@ sudo docker run -p 5000:5000 --device=/dev/video0 johneley/johns-private-repo:la
 |---|---|---|
 | `SECRET_KEY` | `dev-secret-change-in-prod` | Flask session secret — **change in production** |
 
-Recognition tolerance can also be adjusted at runtime via the Settings tab in the dashboard (stored in `app/data/`).
+Recognition tolerance can be adjusted at runtime via the Settings tab (range 0.30–0.70, default 0.50). Lower values require a closer match; higher values are more permissive.
+
+## First-Run Behaviour
+
+The system checks for images inside `app/data/authorized_faces/` on every request. While that directory is empty:
+
+- All routes are accessible without a login session.
+- The session user is set to `"admin"` automatically.
+- The `/login` page redirects straight to the dashboard.
+
+Once you add at least one image to `authorized_faces/`, the login gate activates on the next request.
 
 ## Deployment Notes
 
 - Tested on **Raspberry Pi 5** with 16 GB RAM and a 256 GB SD card running Debian Trixie (ARM64).
 - A USB webcam must be connected and accessible as `/dev/video0` before starting the container.
 - Activity logs are written to `app/data/recognition_log.json` and capped at 200 events in memory.
+- On Windows, OpenCV uses the DirectShow backend automatically for faster camera access.
 
 ## License
 
