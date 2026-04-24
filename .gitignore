@@ -1,0 +1,59 @@
+# =====================
+# Python
+# =====================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual env
+.venv/
+venv/
+env/
+ENV/
+
+# Env variables
+.env
+
+# =====================
+# Flask
+# =====================
+instance/
+*.sqlite3
+*.sqlite3-journal
+
+# =====================
+# ML / Face recognition models
+# =====================
+*.h5
+*.pkl
+*.onnx
+*.pt
+models/
+
+# =====================
+# Testing / cache
+# =====================
+.pytest_cache/
+.coverage
+.coverage.*
+
+# =====================
+# Logs
+# =====================
+*.log
+
+# =====================
+# OS
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# Docker
+# =====================
+docker-compose.override.yml
+
+# =====================
+# Other
+# =====================
+checksums.txt
