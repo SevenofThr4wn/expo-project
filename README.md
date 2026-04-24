@@ -1,4 +1,4 @@
-# FaceID System
+# FaceID System w. API Calls | Expo Project for IFB102 - Introduction to Computer Systems
 
 A real-time facial recognition and access control system with a web-based dashboard. Built with Python/Flask and designed for deployment on Raspberry Pi hardware.
 
@@ -40,6 +40,7 @@ On first launch with no data, the system skips authentication entirely and opens
 - [OpenCV](https://opencv.org/) — video capture and frame processing
 - [dlib](http://dlib.net/) — face detection backbone
 - [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/) — numerical and image processing
+- [colorlog](https://pypi.org/project/colorlog/) — Dedicated Logging
 
 **Frontend**
 - Vanilla HTML5, CSS3, JavaScript
@@ -94,9 +95,9 @@ project/
 
 ### Prerequisites
 
-- Python 3.8+
-- A webcam (USB or built-in)
-- `cmake` and a C++ compiler (required by dlib)
+- Python 3.8+ (Developed on Python 3.14.4)
+- A webcam (recommended 1080p quality) (USB or built-in) (Wireless or phone camera devices not currently supported)
+- `cmake` and a C++ compiler (required by dlib) (Visual Studio Build Tools)
 
 ### Local Setup
 
@@ -107,7 +108,7 @@ cd expo-project
 
 # 2. Create and activate a virtual environment
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+venv\Scripts\activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -121,6 +122,8 @@ python run.py
 
 The app will be available at `http://localhost:5000`.
 
+For Raspberry Pis: the web interface will be available at: `http://your-pi-address:5000`
+
 ### Docker (Raspberry Pi)
 
 See [docs/setup.md](docs/setup.md) for the full Raspberry Pi deployment guide. Quick start:
@@ -129,7 +132,7 @@ See [docs/setup.md](docs/setup.md) for the full Raspberry Pi deployment guide. Q
 # Pull the pre-built image
 sudo docker pull johneley/johns-private-repo:latest
 
-# Run with webcam access (on Raspberry Pi)
+# Run with webcam access (on Raspberry Pi) & with specified port number (be sure to use port number that is not already in use)
 sudo docker run -p 5000:5000 --device=/dev/video0 johneley/johns-private-repo:latest
 ```
 
@@ -149,20 +152,20 @@ sudo docker run -p 5000:5000 --device=/dev/video0 johneley/johns-private-repo:la
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/face-login` | Authenticate the current camera frame against authorized faces |
-| `POST` | `/enroll` | Enroll a new face (`name` + `image` form fields) |
+| `GET` | `/log` | Retrieve the recognition event log (last 50 entries) |
 | `GET` | `/video` | MJPEG video stream with recognition overlays |
 | `GET` | `/snapshot` | Capture a single JPEG frame from the camera |
 | `GET` | `/reload` | Reload face encodings from disk into memory |
 | `GET` | `/faces` | List all enrolled face names |
-| `DELETE` | `/faces/<name>` | Remove all encodings for a person |
-| `GET` | `/log` | Retrieve the recognition event log (last 50 entries) |
-| `DELETE` | `/log` | Clear all log entries |
 | `GET` | `/stats` | System statistics (enrolled count, today's recognitions, camera status) |
-| `POST` | `/settings` | Update recognition tolerance at runtime |
 | `GET` | `/cameras` | List available camera device indices |
+| `GET` | `/train/status` | Check the status of an in-progress training job |
+| `POST` | `/enroll` | Enroll a new face (`name` + `image` form fields) |
+| `POST` | `/settings` | Update recognition tolerance at runtime |
 | `POST` | `/cameras/select` | Switch the active camera device |
 | `POST` | `/train` | Submit multiple images for bulk training |
-| `GET` | `/train/status` | Check the status of an in-progress training job |
+| `DELETE` | `/faces/<name>` | Remove all encodings for a person |
+| `DELETE` | `/log` | Clear all log entries |
 
 ## Configuration
 
@@ -188,6 +191,14 @@ Once you add at least one image to `authorized_faces/`, the login gate activates
 - A USB webcam must be connected and accessible as `/dev/video0` before starting the container.
 - Activity logs are written to `app/data/recognition_log.json` and capped at 200 events in memory.
 - On Windows, OpenCV uses the DirectShow backend automatically for faster camera access.
+
+## Roadmap & Planned Features
+- **New Major Feature**: Proteced Route (API Calls Page)
+- **New Feature**: Account system with privledges
+- **New Feature**: Better logging integration
+- **Critical Bug Fix**: Live feed displaying with zero cameras connected (Dont display live feed if no camera is not connected)
+- **Critical Bug Fix**: Random crashing (Still yet to be debugged)
+- **Optimizations**: Better optimizations for Raspberry Pi and Linux Distributions
 
 ## License
 
