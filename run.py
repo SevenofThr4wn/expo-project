@@ -1,4 +1,6 @@
 import os
+import logging
+import colorlog
 from flask import Flask, render_template, session, redirect, request
 
 from app.routes.enroll import enroll_bp
@@ -9,9 +11,34 @@ from app.routes.logs import logs_bp
 from app.routes.train import train_bp
 from app.routes.cameras import cameras_bp
 
+LOG_FORMAT = "%(log_color)s [%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
+
+handler = colorlog.StreamHandler()
+handler.setFormatter(colorlog.ColoredFormatter(
+    LOG_FORMAT))
+
+logger = logging.getLogger(__name__)
+logger.addHandler(handler)
+
+# Configures werkzeug logger
+werkzeug_logger = logging.getLogger("werkzeug")
+werkzeug_logger.addHandler(handler)
+werkzeug_logger.setLevel(logging.INFO)
+werkzeug_logger.handlers
+werkzeug_logger.propagate = False
+
+
 app = Flask(__name__, template_folder="app/templates", static_folder="app/static")
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
+logger.info("App Init: Flask App Initialized")
 
+# Configures other loggers
+fr_models_logger = logging.getLogger("face_recognition_models")
+fr_models_logger.setLevel(logging.WARNING)
+
+
+
+# Registers all Flask route blueprints
 app.register_blueprint(enroll_bp)
 app.register_blueprint(recognize_bp)
 app.register_blueprint(auth_bp)
@@ -67,3 +94,4 @@ def logout():
 
 if __name__ == "__main__":
     app.run(debug=True)
+    logger.info("Debug Mode Active")
