@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Enroll Face — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Enroll Face</h1>
+    <span class="page-subtitle">Camera capture only — no file upload</span>
+</div>
+
+<div class="enroll-layout" x-data="enrollApp()">
+
+    <!-- ── Camera preview ─────────────────────────────────────────────── -->
+    <div class="enroll-camera-col">
+        <div class="video-wrap">
+            <img src="/api/video" alt="Camera preview">
+            <div class="feed-badge">PREVIEW</div>
+        </div>
+        <div class="quality-bar-wrap" x-show="lastQuality > 0">
+            <span class="quality-lbl">Last capture quality</span>
+            <div class="quality-track">
+                <div class="quality-fill"
+                     :class="lastQuality >= 70 ? 'q-good' : lastQuality >= 40 ? 'q-fair' : 'q-poor'"
+                     :style="'width:' + lastQuality + '%'"></div>
+            </div>
+            <span class="quality-score" x-text="lastQuality + '%'"></span>
+        </div>
+    </div>
+
+    <!-- ── Enroll form ─────────────────────────────────────────────────── -->
+    <div class="enroll-form-col">
+
+        <div class="panel-card">
+            <h3 class="card-title">Person Details</h3>
+            <input
+                type="text" x-model="name"
+                placeholder="Full name (e.g. John Smith)"
+                class="input-field"
+                @keydown.enter="captureAndEnroll"
+            >
+            <p class="hint-text">
+                If the name matches a user account username, the face will be linked to that account and can be used for face login.
+            </p>
+        </div>
+
+        <div class="panel-card">
+            <h3 class="card-title">Capture Frames</h3>
+            <p class="hint-text">
+                Capture multiple frames from different angles for the best recognition accuracy. A minimum of 3 frames is recommended.
+            </p>
+
+            <div class="capture-controls">
+                <button class="btn btn-secondary" @click="captureFrame" :disabled="capturing || !name.trim()">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+                    Capture
+                </button>
+                <button class="btn btn-ghost" @click="captureSession" :disabled="capturing || !name.trim()">
+                    Auto-capture <span x-text="sessionFrames"></span> frames
+                </button>
+                <input type="number" x-model.number="sessionFrames" min="2" max="15" class="frames-input">
+            </div>
+
+            <!-- Captured frames preview -->
+            <div class="captures-row" x-show="captures.length > 0">
+                <template x-for="(cap, i) in captures" :key="i">
+                    <div class="capture-thumb">
+                        <img :src="cap.url" alt="capture">
+                        <button class="thumb-remove" @click="removeCapture(i)">&times;</button>
+                        <div class="thumb-quality" :class="cap.quality >= 70 ? 'q-good' : cap.quality >= 40 ? 'q-fair' : 'q-poor'"
+                             x-text="cap.quality + '%'"></div>
+                    </div>
+                </template>
+            </div>
+
+            <p class="capture-count" x-show="captures.length > 0">
+                <span x-text="captures.length"></span> frame(s) ready to enroll
+            </p>
+
+            <!-- Progress bar for auto-capture -->
+            <div class="progress-wrap" x-show="capturing" x-transition>
+                <div class="progress-text" x-text="progressMsg"></div>
+                <div class="progress-track">
+                    <div class="progress-fill" :style="'width:' + progress + '%'"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <button class="btn btn-primary"
+                    @click="enrollAll"
+                    :disabled="!name.trim() || captures.length === 0 || enrolling">
+                <span x-show="!enrolling">Enroll <span x-text="captures.length"></span> Frame(s)</span>
+                <span x-show="enrolling">Enrolling&hellip;</span>
+            </button>
+            <p class="status-msg"
+               :class="statusOk ? 'status-ok' : 'status-err'"
+               x-show="statusMsg"
+               x-text="statusMsg">
+            </p>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/enroll.js') }}"></script>
+{% endblock %}

@@ -1,81 +1,103 @@
+/**
+ * FaceID REST API client
+ * All methods return the parsed JSON response (or throw on network error).
+ */
 const API = {
-    async enroll(name, image) {
+
+    // ── Auth ──────────────────────────────────────────────────────────────────
+    async login(username, password, remember = false) {
+        return _post('/auth/login', { username, password, remember });
+    },
+
+    // ── Faces ─────────────────────────────────────────────────────────────────
+    async getFaces() {
+        return _get('/api/faces');
+    },
+    async deleteFace(name) {
+        const r = await fetch(`/api/faces/${encodeURIComponent(name)}`, { method: 'DELETE' });
+        return r.json();
+    },
+
+    // ── Enroll ────────────────────────────────────────────────────────────────
+    async enroll(name, imageBlob) {
         const fd = new FormData();
-        fd.append("name", name);
-        fd.append("image", image, image.name || "capture.jpg");
-        const r = await fetch("/enroll", { method: "POST", body: fd });
+        fd.append('name', name);
+        fd.append('image', imageBlob, imageBlob.name || 'capture.jpg');
+        const r = await fetch('/api/enroll', { method: 'POST', body: fd });
         return r.json();
     },
 
-    async reload() {
-        const r = await fetch("/reload");
-        return r.json();
-    },
-
+    // ── Stream ────────────────────────────────────────────────────────────────
     async getSnapshot() {
-        const r = await fetch("/snapshot");
-        if (!r.ok) throw new Error("Snapshot failed");
+        const r = await fetch('/api/snapshot');
+        if (!r.ok) throw new Error('Snapshot failed');
         return r.blob();
     },
+    async reloadEncodings() {
+        return _get('/api/reload');
+    },
 
-    async getFaces() {
-        const r = await fetch("/faces");
+    // ── Logs ──────────────────────────────────────────────────────────────────
+    async getLogs({ limit = 100, offset = 0, name = '' } = {}) {
+        const p = new URLSearchParams({ limit, offset });
+        if (name) p.set('name', name);
+        return _get(`/api/logs?${p}`);
+    },
+    async clearLogs() {
+        const r = await fetch('/api/logs', { method: 'DELETE' });
         return r.json();
     },
 
-    async deleteFace(name) {
-        const r = await fetch(`/faces/${encodeURIComponent(name)}`, { method: "DELETE" });
-        return r.json();
-    },
-
-    async getLog() {
-        const r = await fetch("/log");
-        return r.json();
-    },
-
-    async clearLog() {
-        const r = await fetch("/log", { method: "DELETE" });
-        return r.json();
-    },
-
+    // ── Stats ─────────────────────────────────────────────────────────────────
     async getStats() {
-        const r = await fetch("/stats");
-        return r.json();
+        return _get('/api/stats');
     },
 
+    // ── Cameras ───────────────────────────────────────────────────────────────
     async getCameras() {
-        const r = await fetch("/cameras");
-        return r.json();
+        return _get('/api/cameras');
     },
-
     async selectCamera(index) {
-        const r = await fetch("/cameras/select", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ index }),
+        return _post('/api/cameras/select', { index });
+    },
+
+    // ── Settings ──────────────────────────────────────────────────────────────
+    async saveSettings(payload) {
+        return _post('/api/settings', payload);
+    },
+
+    // ── Users (admin) ─────────────────────────────────────────────────────────
+    async getUsers() {
+        return _get('/api/users');
+    },
+    async createUser(data) {
+        return _post('/api/users', data);
+    },
+    async updateUser(id, data) {
+        const r = await fetch(`/api/users/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
         });
         return r.json();
     },
-
-    async trainBulk(name, images) {
-        const fd = new FormData();
-        fd.append("name", name);
-        images.forEach((img, i) => fd.append("images", img, img.name || `frame_${i}.jpg`));
-        const r = await fetch("/train", { method: "POST", body: fd });
+    async deleteUser(id) {
+        const r = await fetch(`/api/users/${id}`, { method: 'DELETE' });
         return r.json();
     },
-
-    async getTrainingStatus() {
-        const r = await fetch("/train/status");
-        return r.json();
-    },
-
-    async saveSettings(tolerance) {
-        const r = await fetch("/settings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tolerance })
-        });
-        return r.json();
-    }
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function _get(url) {
+    const r = await fetch(url);
+    return r.json();
+}
+
+async function _post(url, body) {
+    const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    return r.json();
+}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Enrolled Faces — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Enrolled Faces</h1>
+        <span class="page-subtitle" id="faceCountLabel">&mdash;</span>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-ghost btn-sm" id="refreshFacesBtn">Refresh</button>
+        <a href="{{ url_for('pages.enroll_page') }}" class="btn btn-primary btn-sm">+ Enroll New Face</a>
+    </div>
+</div>
+
+<div id="facesGrid" class="faces-grid">
+    <div class="loading-placeholder">Loading&hellip;</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadFaces() {
+    const grid = document.getElementById('facesGrid');
+    try {
+        const d = await API.getFaces();
+        const faces = d.faces || [];
+        document.getElementById('faceCountLabel').textContent =
+            faces.length === 1 ? '1 person enrolled' : `${faces.length} people enrolled`;
+
+        if (!faces.length) {
+            grid.innerHTML = '<div class="faces-empty">No faces enrolled yet. <a href="{{ url_for("pages.enroll_page") }}">Enroll one now.</a></div>';
+            return;
+        }
+
+        grid.innerHTML = faces.map(f => `
+            <div class="face-card" data-name="${f.name}">
+                <div class="face-avatar">${f.name[0].toUpperCase()}</div>
+                <div class="face-name">${f.name}</div>
+                <div class="face-encodings">${f.count} encoding${f.count !== 1 ? 's' : ''}</div>
+                <div class="face-quality-bar">
+                    <div class="face-quality-fill ${f.count >= 8 ? 'q-strong' : f.count >= 4 ? 'q-good' : f.count >= 2 ? 'q-fair' : 'q-poor'}"
+                         style="width:${Math.min(f.count / 10 * 100, 100)}%"></div>
+                </div>
+                <span class="quality-badge ${f.count >= 8 ? 'q-strong' : f.count >= 4 ? 'q-good' : f.count >= 2 ? 'q-fair' : 'q-poor'}">
+                    ${f.count >= 8 ? 'Strong' : f.count >= 4 ? 'Good' : f.count >= 2 ? 'Fair' : 'Weak'}
+                </span>
+                <button class="face-delete btn btn-danger btn-sm" data-name="${f.name}">Remove</button>
+            </div>
+        `).join('');
+
+        grid.querySelectorAll('.face-delete').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const name = btn.dataset.name;
+                if (!confirm(`Remove all encodings for "${name}"?`)) return;
+                const r = await API.deleteFace(name);
+                if (r.error) { toast(r.error, 'error'); return; }
+                toast(r.message, 'success');
+                loadFaces();
+            });
+        });
+    } catch {
+        grid.innerHTML = '<div class="faces-empty">Failed to load faces.</div>';
+    }
+}
+
+document.getElementById('refreshFacesBtn').addEventListener('click', loadFaces);
+loadFaces();
+</script>
+{% endblock %}

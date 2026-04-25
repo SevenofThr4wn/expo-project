@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Settings — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Settings</h1>
+</div>
+
+<div class="settings-layout" x-data="settingsApp()">
+
+    <!-- ── Recognition ─────────────────────────────────────────────────── -->
+    <div class="settings-card">
+        <h3 class="settings-section-title">Recognition</h3>
+
+        <div class="setting-row">
+            <div>
+                <div class="setting-label">Tolerance</div>
+                <div class="setting-hint">Lower = stricter matching &nbsp;(0.30 – 0.70)</div>
+            </div>
+            <div class="slider-group">
+                <input type="range" x-model.number="tolerance" min="30" max="70" class="slider">
+                <span class="slider-val" x-text="(tolerance / 100).toFixed(2)"></span>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div>
+                <div class="setting-label">Show Facial Landmarks</div>
+                <div class="setting-hint">Draw 68-point landmark overlay on the video feed</div>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" x-model="showLandmarks">
+                <span class="toggle-track"></span>
+            </label>
+        </div>
+
+        <button class="btn btn-primary btn-fixed" @click="saveRecognition" :disabled="saving">
+            <span x-text="saving ? 'Saving…' : 'Save'"></span>
+        </button>
+        <p class="status-msg" :class="statusOk ? 'status-ok' : 'status-err'" x-show="recognitionMsg" x-text="recognitionMsg"></p>
+    </div>
+
+    <!-- ── Camera ──────────────────────────────────────────────────────── -->
+    <div class="settings-card">
+        <h3 class="settings-section-title">Camera Device</h3>
+        <p class="setting-hint" style="margin-bottom:12px">
+            Phones connected via USB or Microsoft Phone Link appear as virtual devices.
+        </p>
+
+        <div class="camera-row">
+            <select x-model.number="selectedCamera" class="input-field camera-select">
+                <option value="">— Click Scan to detect cameras —</option>
+                <template x-for="c in cameras" :key="c.index">
+                    <option :value="c.index" x-text="'Camera ' + c.index + (c.index === activeCamera ? ' (active)' : '')"></option>
+                </template>
+            </select>
+            <button class="btn btn-ghost btn-sm" @click="scanCameras" :disabled="scanning">
+                <span x-text="scanning ? 'Scanning…' : 'Scan'"></span>
+            </button>
+        </div>
+        <div class="camera-status-row">
+            <span class="dot" :class="cameraConnected ? 'dot-online' : 'dot-offline'"></span>
+            <span class="setting-hint" x-text="cameraStatusText"></span>
+        </div>
+        <button class="btn btn-primary btn-fixed" @click="applyCamera" style="margin-top:12px" :disabled="selectedCamera === ''">
+            Apply Camera
+        </button>
+        <p class="status-msg" :class="camMsgOk ? 'status-ok' : 'status-err'" x-show="cameraMsg" x-text="cameraMsg"></p>
+    </div>
+
+    <!-- ── Danger zone ─────────────────────────────────────────────────── -->
+    {% if current_user.is_admin %}
+    <div class="settings-card danger-zone">
+        <h3 class="settings-section-title">Danger Zone</h3>
+        <p class="setting-hint" style="margin-bottom:12px">These actions are irreversible.</p>
+        <button class="btn btn-danger btn-fixed" @click="clearLog">Clear Activity Log</button>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function settingsApp() {
+    return {
+        tolerance: 50,
+        showLandmarks: true,
+        saving: false,
+        statusOk: true,
+        recognitionMsg: '',
+        cameras: [],
+        selectedCamera: '',
+        activeCamera: null,
+        cameraConnected: false,
+        cameraStatusText: '',
+        scanning: false,
+        cameraMsg: '',
+        camMsgOk: true,
+
+        async saveRecognition() {
+            this.saving = true;
+            try {
+                const r = await API.saveSettings({
+                    tolerance: this.tolerance / 100,
+                    show_landmarks: this.showLandmarks,
+                });
+                this.recognitionMsg = r.message || 'Saved.';
+                this.statusOk = !r.error;
+            } catch { this.recognitionMsg = 'Failed to save.'; this.statusOk = false; }
+            finally { this.saving = false; }
+        },
+
+        async scanCameras() {
+            this.scanning = true;
+            this.cameraMsg = '';
+            try {
+                const d = await API.getCameras();
+                this.cameras = (d.cameras || []).map(i => ({ index: i }));
+                this.activeCamera = d.active;
+                this.cameraConnected = d.connected;
+                this.selectedCamera = d.active ?? '';
+                this.cameraStatusText = d.connected
+                    ? `Camera ${d.active} connected`
+                    : this.cameras.length ? 'Camera found but not connected' : 'No cameras detected';
+                this.cameraMsg = this.cameras.length
+                    ? `Found ${this.cameras.length} device(s).`
+                    : 'No cameras found.';
+                this.camMsgOk = this.cameras.length > 0;
+            } catch { this.cameraMsg = 'Scan failed.'; this.camMsgOk = false; }
+            finally { this.scanning = false; }
+        },
+
+        async applyCamera() {
+            const r = await API.selectCamera(this.selectedCamera);
+            this.cameraMsg = r.error || r.message;
+            this.camMsgOk = !r.error;
+            this.cameraConnected = r.connected ?? false;
+            this.cameraStatusText = r.connected
+                ? `Camera ${this.selectedCamera} connected` : 'Could not open camera';
+        },
+
+        async clearLog() {
+            if (!confirm('Clear all activity log entries? This cannot be undone.')) return;
+            const r = await API.clearLogs();
+            toast(r.message || 'Log cleared.', 'success');
+        },
+    };
+}
+</script>
+{% endblock %}

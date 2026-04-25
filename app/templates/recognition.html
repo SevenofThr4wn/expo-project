@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Live Recognition — FaceID{% endblock %}
+
+{% block content %}
+<div class="recognition-layout">
+
+    <!-- ── Video panel ─────────────────────────────────────────────────── -->
+    <div class="video-panel">
+        <div class="video-wrap">
+            <img id="videoFeed" src="/api/video" alt="Live feed">
+            <div class="feed-badge">LIVE</div>
+        </div>
+    </div>
+
+    <!-- ── Events sidebar ─────────────────────────────────────────────── -->
+    <aside class="recog-sidebar">
+
+        <div class="panel-card">
+            <div class="card-head">
+                <h3 class="card-title">Recent Recognitions</h3>
+                <span class="live-dot"></span>
+            </div>
+            <ul id="recentEvents" class="recent-list">
+                <li class="recent-empty">Waiting for events&hellip;</li>
+            </ul>
+        </div>
+
+        <div class="panel-card">
+            <h3 class="card-title">Session Stats</h3>
+            <div class="session-stats">
+                <div class="ss-row">
+                    <span class="ss-lbl">Events this session</span>
+                    <span class="ss-val" id="sessionCount">0</span>
+                </div>
+                <div class="ss-row">
+                    <span class="ss-lbl">Last seen</span>
+                    <span class="ss-val ss-name" id="lastSeen">&mdash;</span>
+                </div>
+                <div class="ss-row">
+                    <span class="ss-lbl">Camera</span>
+                    <span class="ss-val" id="camStatus">&mdash;</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3 class="card-title">Controls</h3>
+            <button id="reloadBtn" class="btn btn-ghost">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+                Reload Encodings
+            </button>
+        </div>
+
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/recognition.js') }}"></script>
+{% endblock %}

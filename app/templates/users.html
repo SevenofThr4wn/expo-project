@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}User Management — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">User Management</h1>
+    <span class="page-subtitle">Admin only</span>
+</div>
+
+<div class="users-layout" x-data="usersApp()">
+
+    <!-- ── User table ──────────────────────────────────────────────────── -->
+    <div class="dash-card" style="margin-bottom:20px">
+        <div class="card-head">
+            <h3 class="card-title">Accounts</h3>
+            <button class="btn btn-ghost btn-sm" @click="loadUsers">Refresh</button>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Faces</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="!users.length">
+                        <tr><td colspan="6" class="empty-row">No users.</td></tr>
+                    </template>
+                    <template x-for="u in users" :key="u.id">
+                        <tr>
+                            <td><strong x-text="u.username"></strong></td>
+                            <td><span class="role-badge" :class="'role-' + u.role" x-text="u.role"></span></td>
+                            <td>
+                                <span x-text="u.is_active ? 'Active' : 'Disabled'"
+                                      :class="u.is_active ? 'text-success' : 'text-danger'"></span>
+                            </td>
+                            <td x-text="u.face_count"></td>
+                            <td class="ts" x-text="u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'"></td>
+                            <td>
+                                <div class="action-row">
+                                    <button class="btn btn-ghost btn-xs"
+                                            @click="editUser(u)">Edit</button>
+                                    <button class="btn btn-danger btn-xs"
+                                            @click="deleteUser(u)"
+                                            :disabled="u.id === currentUserId">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Create / Edit form ──────────────────────────────────────────── -->
+    <div class="dash-card settings-card">
+        <h3 class="card-title" x-text="editing ? 'Edit User' : 'Create User'"></h3>
+
+        <div class="form-grid">
+            <div>
+                <label class="field-label">Username</label>
+                <input type="text" x-model="form.username" class="input-field"
+                       :readonly="editing" placeholder="username">
+            </div>
+            <div>
+                <label class="field-label">Email (optional)</label>
+                <input type="email" x-model="form.email" class="input-field" placeholder="email@example.com">
+            </div>
+            <div>
+                <label class="field-label" x-text="editing ? 'New Password (leave blank to keep)' : 'Password'"></label>
+                <input type="password" x-model="form.password" class="input-field" placeholder="••••••••">
+            </div>
+            <div>
+                <label class="field-label">Role</label>
+                <select x-model="form.role" class="input-field">
+                    <option value="viewer">Viewer</option>
+                    <option value="operator">Operator</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div x-show="editing">
+                <label class="field-label">Status</label>
+                <select x-model="form.is_active" class="input-field">
+                    <option :value="true">Active</option>
+                    <option :value="false">Disabled</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn btn-primary btn-fixed" @click="submitForm" :disabled="saving">
+                <span x-text="saving ? 'Saving…' : (editing ? 'Update User' : 'Create User')"></span>
+            </button>
+            <button class="btn btn-ghost btn-fixed" x-show="editing" @click="cancelEdit">Cancel</button>
+        </div>
+        <p class="status-msg" :class="statusOk ? 'status-ok' : 'status-err'" x-show="statusMsg" x-text="statusMsg"></p>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function usersApp() {
+    return {
+        users: [],
+        currentUserId: null,
+        editing: false,
+        saving: false,
+        statusMsg: '',
+        statusOk: true,
+        form: { username: '', email: '', password: '', role: 'operator', is_active: true },
+
+        async init() {
+            // Get current user id from meta if needed — simple approach: fetch stats
+            await this.loadUsers();
+        },
+
+        async loadUsers() {
+            try {
+                const d = await API.getUsers();
+                this.users = d.users || [];
+            } catch { toast('Failed to load users.', 'error'); }
+        },
+
+        editUser(u) {
+            this.editing = true;
+            this.form = {
+                id: u.id, username: u.username, email: u.email || '',
+                password: '', role: u.role, is_active: u.is_active,
+            };
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        },
+
+        cancelEdit() {
+            this.editing = false;
+            this.form = { username: '', email: '', password: '', role: 'operator', is_active: true };
+            this.statusMsg = '';
+        },
+
+        async submitForm() {
+            if (!this.editing && (!this.form.username || !this.form.password)) {
+                this.statusMsg = 'Username and password are required.';
+                this.statusOk = false;
+                return;
+            }
+            this.saving = true;
+            this.statusMsg = '';
+            try {
+                let r;
+                if (this.editing) {
+                    const payload = { role: this.form.role, is_active: this.form.is_active, email: this.form.email };
+                    if (this.form.password) payload.password = this.form.password;
+                    r = await API.updateUser(this.form.id, payload);
+                } else {
+                    r = await API.createUser(this.form);
+                }
+                if (r.error) {
+                    this.statusMsg = r.error; this.statusOk = false;
+                } else {
+                    this.statusMsg = r.message; this.statusOk = true;
+                    this.cancelEdit();
+                    await this.loadUsers();
+                }
+            } catch { this.statusMsg = 'Request failed.'; this.statusOk = false; }
+            finally { this.saving = false; }
+        },
+
+        async deleteUser(u) {
+            if (!confirm(`Delete user "${u.username}"? This cannot be undone.`)) return;
+            try {
+                const r = await API.deleteUser(u.id);
+                if (r.error) { toast(r.error, 'error'); return; }
+                toast(r.message, 'success');
+                await this.loadUsers();
+            } catch { toast('Failed to delete user.', 'error'); }
+        },
+    };
+}
+</script>
+{% endblock %}

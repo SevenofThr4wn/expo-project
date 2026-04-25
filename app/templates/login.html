@@ -4,48 +4,153 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FaceID &mdash; Login</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 </head>
 <body>
 
-<div class="login-layout">
+<div class="login-layout" x-data="loginApp()">
 
-    <div class="login-video-side">
-        <div class="login-video-wrapper">
-            <img src="/video" alt="Camera Feed">
-            <div class="login-feed-label">LIVE</div>
+    <!-- Camera side -->
+    <div class="login-camera-side">
+        <div class="login-camera-wrap">
+            <img src="/api/video" alt="Camera feed" class="login-feed">
+            <div class="live-badge">LIVE</div>
+            <!-- Scan overlay (shown in face-login mode) -->
+            <div class="scan-overlay" x-show="tab === 'face'" x-transition>
+                <div class="scan-frame">
+                    <span class="scan-corner tl"></span>
+                    <span class="scan-corner tr"></span>
+                    <span class="scan-corner bl"></span>
+                    <span class="scan-corner br"></span>
+                    <div class="scan-line"></div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Auth panel -->
     <div class="login-panel">
         <div class="login-logo">F</div>
         <h1 class="login-title">FaceID System</h1>
-        <p class="login-subtitle">Look at the camera to authenticate</p>
 
-        <div class="scan-ring">
-            <div class="scan-inner"></div>
+        <!-- Tab switcher -->
+        <div class="login-tabs">
+            <button class="login-tab" :class="{ active: tab === 'password' }" @click="tab = 'password'; stopFaceScan()">
+                Password
+            </button>
+            <button class="login-tab" :class="{ active: tab === 'face' }" @click="tab = 'face'; startFaceScan()">
+                Face Login
+            </button>
         </div>
 
-        <p id="loginStatus">Scanning for a known face&hellip;</p>
+        <!-- Password form -->
+        <div x-show="tab === 'password'" x-transition class="login-form-wrap">
+            <input
+                type="text" x-model="username" placeholder="Username"
+                class="input-field" @keydown.enter="doLogin"
+            >
+            <input
+                type="password" x-model="password" placeholder="Password"
+                class="input-field" @keydown.enter="doLogin"
+            >
+            <label class="remember-row">
+                <input type="checkbox" x-model="remember">
+                <span>Remember me</span>
+            </label>
+            <button class="btn btn-primary" @click="doLogin" :disabled="loading">
+                <span x-show="!loading">Sign in</span>
+                <span x-show="loading">Signing in&hellip;</span>
+            </button>
+            <p class="login-error" x-show="error" x-text="error"></p>
+        </div>
+
+        <!-- Face login -->
+        <div x-show="tab === 'face'" x-transition class="login-form-wrap" style="align-items:center">
+            <div class="scan-ring" :class="{ scanning: scanning }">
+                <div class="scan-inner"></div>
+            </div>
+            <p class="login-face-hint" x-text="faceStatus"></p>
+            <p class="login-error" x-show="error" x-text="error"></p>
+        </div>
     </div>
 
 </div>
 
 <script>
-    async function checkFace() {
-        try {
-            const res = await fetch("/face-login");
-            const data = await res.json();
-            if (data.success) {
-                document.getElementById("loginStatus").textContent = "Authenticated! Redirecting…";
-                window.location.href = "/";
-            }
-        } catch {
-            document.getElementById("loginStatus").textContent = "Camera error. Retrying…";
-        }
-    }
+function loginApp() {
+    return {
+        tab: 'password',
+        username: '',
+        password: '',
+        remember: false,
+        loading: false,
+        error: '',
+        scanning: false,
+        faceStatus: 'Look at the camera to authenticate…',
+        _scanInterval: null,
 
-    setInterval(checkFace, 1500);
+        async doLogin() {
+            if (!this.username || !this.password) {
+                this.error = 'Please enter your username and password.';
+                return;
+            }
+            this.loading = true;
+            this.error = '';
+            try {
+                const r = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: this.username,
+                        password: this.password,
+                        remember: this.remember,
+                    }),
+                });
+                const d = await r.json();
+                if (d.success) {
+                    window.location.href = '/';
+                } else {
+                    this.error = d.error || 'Login failed.';
+                }
+            } catch {
+                this.error = 'Connection error. Is the server running?';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        startFaceScan() {
+            this.scanning = true;
+            this.faceStatus = 'Scanning… look directly at the camera.';
+            this._scanInterval = setInterval(() => this.checkFace(), 1800);
+        },
+
+        stopFaceScan() {
+            this.scanning = false;
+            clearInterval(this._scanInterval);
+            this._scanInterval = null;
+            this.error = '';
+        },
+
+        async checkFace() {
+            try {
+                const r = await fetch('/auth/face-login');
+                const d = await r.json();
+                if (d.success) {
+                    this.faceStatus = 'Authenticated! Redirecting…';
+                    this.scanning = false;
+                    clearInterval(this._scanInterval);
+                    setTimeout(() => window.location.href = '/', 600);
+                } else if (d.message) {
+                    this.faceStatus = d.message;
+                }
+            } catch {
+                this.faceStatus = 'Camera error. Retrying…';
+            }
+        },
+    };
+}
 </script>
 
 </body>

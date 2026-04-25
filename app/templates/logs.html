@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Activity Log — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Activity Log</h1>
+    <div class="header-actions">
+        <input type="text" id="searchInput" placeholder="Filter by name…" class="input-field input-sm">
+        <a href="/api/logs/export" class="btn btn-ghost btn-sm" download>Export CSV</a>
+        <button id="refreshBtn" class="btn btn-ghost btn-sm">Refresh</button>
+        {% if current_user.is_admin %}
+        <button id="clearBtn" class="btn btn-danger btn-sm">Clear All</button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Person</th>
+                <th>Confidence</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody id="logBody">
+            <tr><td colspan="3" class="empty-row">Loading&hellip;</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination-bar">
+    <button id="prevBtn" class="btn btn-ghost btn-sm" disabled>Previous</button>
+    <span id="pageInfo" class="page-info">Page 1</span>
+    <button id="nextBtn" class="btn btn-ghost btn-sm">Next</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let page = 0;
+const limit = 50;
+let totalEvents = 0;
+let searchTerm = '';
+
+async function loadLogs() {
+    const tbody = document.getElementById('logBody');
+    try {
+        const d = await API.getLogs({ limit, offset: page * limit, name: searchTerm });
+        const events = d.events || [];
+        totalEvents = d.total || 0;
+
+        document.getElementById('pageInfo').textContent =
+            `Page ${page + 1} of ${Math.ceil(totalEvents / limit) || 1}  (${totalEvents} total)`;
+        document.getElementById('prevBtn').disabled = page === 0;
+        document.getElementById('nextBtn').disabled = (page + 1) * limit >= totalEvents;
+
+        if (!events.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="empty-row">No activity logged yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = events.map(e => {
+            const ts = new Date(e.timestamp).toLocaleString();
+            const confClass = e.confidence >= 80 ? 'badge-success' : e.confidence >= 60 ? 'badge-warn' : 'badge-danger';
+            return `<tr>
+                <td><strong>${e.name}</strong></td>
+                <td><span class="badge ${confClass}">${e.confidence}%</span></td>
+                <td class="ts">${ts}</td>
+            </tr>`;
+        }).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty-row">Failed to load logs.</td></tr>';
+    }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => { page = 0; loadLogs(); });
+document.getElementById('prevBtn').addEventListener('click', () => { page--; loadLogs(); });
+document.getElementById('nextBtn').addEventListener('click', () => { page++; loadLogs(); });
+
+let searchDebounce;
+document.getElementById('searchInput').addEventListener('input', e => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        searchTerm = e.target.value.trim();
+        page = 0;
+        loadLogs();
+    }, 350);
+});
+
+{% if current_user.is_admin %}
+document.getElementById('clearBtn').addEventListener('click', async () => {
+    if (!confirm('Clear all activity log entries? This cannot be undone.')) return;
+    const r = await API.clearLogs();
+    toast(r.message || 'Log cleared.', 'success');
+    loadLogs();
+});
+{% endif %}
+
+loadLogs();
+
+// Live append via Socket.IO
+const socket = io();
+socket.on('recognition', e => {
+    if (page === 0 && !searchTerm) loadLogs();
+});
+</script>
+{% endblock %}
