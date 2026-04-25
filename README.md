@@ -2,11 +2,31 @@
 
 A real-time facial recognition and access control system with a web-based dashboard. Built with Python/Flask and designed for deployment on Raspberry Pi hardware.
 
+
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1.3-000000?style=flat-square&logo=flask&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/OpenCV-4.13-5C3EE8?style=flat-square&logo=opencv&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-4%2F5-A22846?style=flat-square&logo=raspberry-pi&logoColor=white)
+
+
+- [FaceID System w. API Calls | Expo Project for IFB102 - Introduction to Computer Systems](#faceid-system-w-api-calls--expo-project-for-ifb102---introduction-to-computer-systems)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Tech Stack](#tech-stack)
+  - [Project Structure](#project-structure)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Local Setup](#local-setup)
+    - [Docker (Raspberry Pi)](#docker-raspberry-pi)
+  - [Usage](#usage)
+  - [API Reference](#api-reference)
+  - [Configuration](#configuration)
+  - [First-Run Behaviour](#first-run-behaviour)
+  - [Deployment Notes](#deployment-notes)
+  - [Roadmap \& Planned Features](#roadmap--planned-features)
+  - [License](#license)
+
 
 ---
 
@@ -35,12 +55,13 @@ On first launch with no data, the system skips authentication entirely and opens
 ## Tech Stack
 
 **Backend**
-- [Flask](https://flask.palletsprojects.com/) — web framework and REST API
-- [face_recognition](https://github.com/ageitgey/face_recognition) — facial encoding and matching
-- [OpenCV](https://opencv.org/) — video capture and frame processing
-- [dlib](http://dlib.net/) — face detection backbone
-- [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/) — numerical and image processing
+- [Flask](https://flask.palletsprojects.com/) — Web framework and REST API
+- [face_recognition](https://github.com/ageitgey/face_recognition) — Facial encoding and matching
+- [OpenCV](https://opencv.org/) — Video capture and frame processing
+- [dlib](http://dlib.net/) — Face detection backbone
+- [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/) — Numerical and image processing
 - [colorlog](https://pypi.org/project/colorlog/) — Dedicated Logging
+- [python-dotenv](https://pypi.org/project/python-dotenv/) - Envirionment Variable Management
 
 **Frontend**
 - Vanilla HTML5, CSS3, JavaScript
@@ -49,7 +70,7 @@ On first launch with no data, the system skips authentication entirely and opens
 
 **Infrastructure**
 - Docker — containerized deployment
-- Target hardware: Raspberry Pi 4/5 (ARM64, Debian Trixie)
+- Target Hardware: Raspberry Pi 4/5 (ARM64, Debian Trixie)
 
 ## Project Structure
 
@@ -95,7 +116,7 @@ project/
 
 ### Prerequisites
 
-- Python 3.8+ (Developed on Python 3.14.4)
+- Python 3.10+ (Developed on Python 3.14.4)
 - A webcam (recommended 1080p quality) (USB or built-in) (Wireless or phone camera devices not currently supported)
 - `cmake` and a C++ compiler (required by dlib) (Visual Studio Build Tools)
 
@@ -171,7 +192,8 @@ sudo docker run -p 5000:5000 --device=/dev/video0 johneley/johns-private-repo:la
 
 | Variable | Default | Description |
 |---|---|---|
-| `SECRET_KEY` | `dev-secret-change-in-prod` | Flask session secret — **change in production** |
+| `SECRET_KEY` | `very-secure-secret-key` | Flask session secret — **change in production** |
+| `RECOGNITION_TOLERANCE` |`0.5` | The recognition tolerance for training and identification
 
 Recognition tolerance can be adjusted at runtime via the Settings tab (range 0.30–0.70, default 0.50). Lower values require a closer match; higher values are more permissive.
 
