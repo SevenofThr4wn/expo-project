@@ -1,76 +1,95 @@
-# FaceID System w. API Calls | Expo Project for IFB102 - Introduction to Computer Systems
+# FaceID System | Expo Project — IFB102
 
-A real-time facial recognition and access control system with a web-based dashboard. Built with Python/Flask and designed for deployment on Raspberry Pi hardware.
+A real-time facial recognition and access control system with a web dashboard and headless CLI. Built with Python/Flask and designed for deployment on Raspberry Pi hardware.
 
-
-![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1.3-000000?style=flat-square&logo=flask&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/OpenCV-4.13-5C3EE8?style=flat-square&logo=opencv&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-4%2F5-A22846?style=flat-square&logo=raspberry-pi&logoColor=white)
 
+---
 
-- [FaceID System w. API Calls | Expo Project for IFB102 - Introduction to Computer Systems](#faceid-system-w-api-calls--expo-project-for-ifb102---introduction-to-computer-systems)
-  - [Overview](#overview)
-  - [Features](#features)
-  - [Tech Stack](#tech-stack)
-  - [Project Structure](#project-structure)
-  - [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Local Setup](#local-setup)
-    - [Docker (Raspberry Pi)](#docker-raspberry-pi)
-  - [Usage](#usage)
-  - [API Reference](#api-reference)
-  - [Configuration](#configuration)
-  - [First-Run Behaviour](#first-run-behaviour)
-  - [Deployment Notes](#deployment-notes)
-  - [Roadmap \& Planned Features](#roadmap--planned-features)
-  - [License](#license)
-
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Local Setup](#local-setup)
+  - [Docker (Raspberry Pi)](#docker-raspberry-pi)
+- [Usage](#usage)
+  - [Web Interface](#web-interface)
+  - [CLI](#cli)
+- [API Reference](#api-reference)
+  - [Authentication](#authentication)
+  - [Faces](#faces)
+  - [Stream](#stream)
+  - [Logs](#logs)
+  - [Cameras](#cameras)
+  - [Settings](#settings)
+  - [Users](#users)
+- [Auth & Roles](#auth--roles)
+- [Configuration](#configuration)
+- [Default Admin](#default-admin)
+- [Deployment Notes](#deployment-notes)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 ---
 
 ## Overview
 
-FaceID System is a full-stack facial recognition application that lets you enroll faces, stream live video with real-time recognition, and log access events — all from a browser. It is built to run on a Raspberry Pi with a USB webcam, making it suitable for physical access control or identity verification scenarios.
+FaceID System is a full-stack facial recognition application for physical access control and identity verification. It lets you enroll faces, stream live video with real-time recognition overlays, manage user accounts with role-based permissions, and log every access event — all from a browser or the terminal.
 
-On first launch with no data, the system skips authentication entirely and opens the dashboard directly so you can enroll faces straight away.
+The system is built to run on a Raspberry Pi with a USB webcam and is containerized for straightforward deployment.
 
 ## Features
 
 | Feature | Description |
 |---|---|
-| **First-run bypass** | No login required when no authorized faces are enrolled — opens the dashboard immediately |
+| **Username/Password Login** | Session-based login backed by bcrypt-hashed credentials in SQLite |
+| **Face Login** | One-click camera authentication — matches a live frame against enrolled encodings |
+| **JWT API Tokens** | Stateless Bearer tokens for CLI and headless API access |
+| **Role-Based Access** | Three roles: `admin`, `operator`, `viewer` — enforced on every API route |
+| **User Management** | Admins can create, update, disable, and delete user accounts |
 | **Live Video Feed** | MJPEG stream with real-time bounding boxes (green = known, red = unknown) |
-| **Face Enrollment** | Upload an image or capture directly from the live webcam feed to register a person by name |
-| **Webcam Snapshot** | One-click capture from the live feed for enrollment — no separate photo needed |
-| **Face Authentication** | Session-based face-login that validates identity against enrolled encodings |
-| **Activity Logging** | Persistent JSON log of every recognition event with timestamp and confidence score |
-| **Face Management** | View, list, and delete enrolled faces from the dashboard |
-| **Bulk Training** | Upload multiple images at once to improve recognition accuracy for a person |
+| **Face Enrollment** | Upload an image or capture a live snapshot to register a person by name |
+| **Face Linking** | Enrolled faces can be linked to a user account by matching the name |
+| **Activity Logging** | Database-backed log of every recognition event with timestamp and confidence |
+| **Log Export** | Download the full recognition log as a CSV file |
+| **Stats Dashboard** | Enrolled count, today's recognitions, per-hour chart, per-person breakdown |
 | **Camera Selection** | Detect and hot-swap between available camera devices from the Settings panel |
-| **Adjustable Tolerance** | Tune the recognition confidence threshold (0.3–0.7) via the Settings panel |
-| **Statistics** | Live count of enrolled faces, recognitions today, and camera connection status |
+| **Adjustable Tolerance** | Tune the recognition confidence threshold (0.30–0.70) at runtime |
+| **Headless CLI** | Full management interface via `cli.py` — no browser required |
 
 ## Tech Stack
 
 **Backend**
-- [Flask](https://flask.palletsprojects.com/) — Web framework and REST API
-- [face_recognition](https://github.com/ageitgey/face_recognition) — Facial encoding and matching
-- [OpenCV](https://opencv.org/) — Video capture and frame processing
-- [dlib](http://dlib.net/) — Face detection backbone
-- [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/) — Numerical and image processing
-- [colorlog](https://pypi.org/project/colorlog/) — Dedicated Logging
-- [python-dotenv](https://pypi.org/project/python-dotenv/) - Envirionment Variable Management
+- [Flask](https://flask.palletsprojects.com/) — web framework and REST API
+- [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/) + [Flask-Migrate](https://flask-migrate.readthedocs.io/) — database ORM and migrations (SQLite by default)
+- [Flask-Login](https://flask-login.readthedocs.io/) — session-based authentication
+- [Flask-JWT-Extended](https://flask-jwt-extended.readthedocs.io/) — Bearer token authentication for API/CLI
+- [Flask-Bcrypt](https://flask-bcrypt.readthedocs.io/) — password hashing
+- [Flask-SocketIO](https://flask-socketio.readthedocs.io/) + [eventlet](https://eventlet.net/) — WebSocket support
+- [face_recognition](https://github.com/ageitgey/face_recognition) — facial encoding and matching
+- [OpenCV](https://opencv.org/) — video capture and frame processing
+- [dlib](http://dlib.net/) — face detection backbone
+- [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/) — numerical and image processing
+- [colorlog](https://pypi.org/project/colorlog/) — coloured console logging
 
 **Frontend**
 - Vanilla HTML5, CSS3, JavaScript
-- MJPEG streaming for low-latency video
+- MJPEG streaming for low-latency live video
 - REST API calls to the Flask backend
+
+**CLI**
+- [Click](https://click.palletsprojects.com/) — command-line interface framework
+- [Rich](https://rich.readthedocs.io/) — terminal formatting and tables
 
 **Infrastructure**
 - Docker — containerized deployment
-- Target Hardware: Raspberry Pi 4/5 (ARM64, Debian Trixie)
+- gunicorn + eventlet — production WSGI server
+- Target hardware: Raspberry Pi 4/5 (ARM64, Debian Trixie)
 
 ## Project Structure
 
@@ -78,47 +97,62 @@ On first launch with no data, the system skips authentication entirely and opens
 project/
 ├── app/
 │   ├── auth/
-│   │   └── face_auth.py             # Session authentication against authorized_faces/
+│   │   ├── __init__.py              # Blueprint registration
+│   │   ├── decorators.py            # login_required, api_login_required, role_required, admin_required
+│   │   └── routes.py                # /auth/login  /auth/face-login  /auth/logout  /auth/token
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── user.py                  # User model + Role constants (admin / operator / viewer)
+│   │   ├── face_encoding.py         # FaceEncoding model (numpy array stored as binary)
+│   │   └── recognition_log.py       # RecognitionLog model
 │   ├── routes/
-│   │   ├── auth.py                  # GET  /face-login
-│   │   ├── cameras.py               # GET  /cameras, POST /cameras/select
-│   │   ├── enroll.py                # POST /enroll
-│   │   ├── faces.py                 # GET/DELETE /faces, /faces/<name>
-│   │   ├── logs.py                  # GET /log, /stats — DELETE /log — POST /settings
-│   │   ├── recognize.py             # GET  /video, /snapshot, /reload
-│   │   └── train.py                 # POST /train — GET /train/status
+│   │   ├── cameras.py               # GET /api/cameras   POST /api/cameras/select
+│   │   ├── enroll.py                # POST /api/enroll
+│   │   ├── faces.py                 # GET /api/faces   DELETE /api/faces/<name>
+│   │   ├── logs.py                  # GET/DELETE /api/logs   GET /api/logs/export   GET /api/stats
+│   │   ├── pages.py                 # HTML page routes (/, /recognition, /enroll, /faces, /logs, /users, /settings)
+│   │   ├── settings.py              # POST /api/settings
+│   │   ├── stream.py                # GET /api/video   /api/snapshot   /api/reload
+│   │   └── users.py                 # CRUD /api/users
 │   ├── services/
-│   │   ├── camera_service.py        # Camera I/O, frame streaming, placeholder frame
+│   │   ├── camera_service.py        # Camera I/O and MJPEG frame generation
 │   │   ├── face_service.py          # Face detection utilities
-│   │   ├── recognition_service.py   # Face matching, annotation, event throttling
-│   │   └── training_service.py      # Bulk image processing for training
-│   ├── stores/
-│   │   ├── face_store.py            # Pickle-based face encoding persistence
-│   │   └── log_store.py             # Thread-safe JSON recognition event log
+│   │   └── recognition_service.py   # Face matching, bounding-box annotation, event throttling
 │   ├── static/
-│   │   ├── css/styles.css           # Dark theme design system
+│   │   ├── css/styles.css           # Dark-theme design system
 │   │   └── js/
 │   │       ├── api.js               # Fetch-based API client
-│   │       └── main.js              # Tab navigation, polling, all UI handlers
+│   │       ├── dashboard.js         # Dashboard charts and stats polling
+│   │       ├── enroll.js            # Enroll page logic
+│   │       └── recognition.js       # Live feed and recognition UI
 │   ├── templates/
-│   │   ├── index.html               # Main dashboard (Live / Log / Faces / Training / Settings)
-│   │   └── login.html               # Face authentication screen
-│   └── data/                        # Runtime data (gitignored)
-│       ├── encodings.pkl            # Enrolled face encodings
-│       ├── recognition_log.json     # Persisted activity log
-│       └── authorized_faces/        # Images used for login (organised by person name)
-├── run.py                           # Flask entry point
+│   │   ├── base.html                # Shared layout and navigation
+│   │   ├── dashboard.html           # Stats and charts
+│   │   ├── enroll.html              # Face enrollment
+│   │   ├── faces.html               # Enrolled face management
+│   │   ├── login.html               # Username/password + face login
+│   │   ├── logs.html                # Recognition event log
+│   │   ├── recognition.html         # Live video feed
+│   │   ├── settings.html            # Tolerance, camera selection
+│   │   └── users.html               # User account management (admin only)
+│   ├── extensions.py                # Flask extension instances (db, login_manager, bcrypt, jwt, migrate, socketio)
+│   └── __init__.py                  # Application factory (create_app)
+├── cli.py                           # Headless CLI (Click + Rich)
+├── run.py                           # Development server entry point
 ├── requirements.txt
-└── Dockerfile
+├── Dockerfile
+└── .env                             # Environment variables (gitignored)
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.10+ (Developed on Python 3.14.4)
-- A webcam (recommended 1080p quality) (USB or built-in) (Wireless or phone camera devices not currently supported)
-- `cmake` and a C++ compiler (required by dlib) (Visual Studio Build Tools)
+- Python 3.10+
+- A USB or built-in webcam
+- `cmake` and a C++ compiler — required by dlib
+  - Windows: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  - Linux/macOS: `sudo apt install cmake build-essential` / `xcode-select --install`
 
 ### Local Setup
 
@@ -129,21 +163,22 @@ cd expo-project
 
 # 2. Create and activate a virtual environment
 python -m venv venv
+# Windows
 venv\Scripts\activate
+# Linux / macOS
+source venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Set your secret key (optional — defaults to a dev key)
-echo "SECRET_KEY=your-secret-key-here" > .env
+# 4. Configure environment variables (see Configuration section)
+cp .env.example .env   # or create .env manually
 
 # 5. Run the application
 python run.py
 ```
 
-The app will be available at `http://localhost:5000`.
-
-For Raspberry Pis: the web interface will be available at: `http://your-pi-address:5000`
+The app will be available at `http://localhost:5000`. On first launch a default `admin` account is created automatically (see [Default Admin](#default-admin)).
 
 ### Docker (Raspberry Pi)
 
@@ -153,75 +188,245 @@ See [docs/setup.md](docs/setup.md) for the full Raspberry Pi deployment guide. Q
 # Pull the pre-built image
 sudo docker pull johneley/johns-private-repo:latest
 
-# Run with webcam access (on Raspberry Pi) & with specified port number (be sure to use port number that is not already in use)
-sudo docker run -p 5000:5000 --device=/dev/video0 johneley/johns-private-repo:latest
+# Run with webcam access and persistent database storage
+sudo docker run -p 5000:5000 \
+  --device=/dev/video0 \
+  -v faceid-data:/app/instance \
+  -e FLASK_SECRET_KEY=your-secret-here \
+  -e ADMIN_PASSWORD=your-admin-password \
+  johneley/johns-private-repo:latest
 ```
 
 ## Usage
 
-1. **First launch** — If no authorized faces are enrolled, the dashboard opens immediately with no login prompt. Use this opportunity to enroll faces.
-2. **Enroll a face** — On the **Live Feed** tab, enter a name and either upload a photo or click **Capture** to grab a frame from the webcam, then click **Enroll Face**.
-3. **Improve accuracy** — Use the **Training** tab to upload multiple images of the same person and build a richer encoding set.
-4. **Live feed** — The **Live Feed** tab streams real-time video with name labels and confidence scores overlaid on each detected face.
-5. **Activity log** — The **Activity Log** tab shows a timestamped history of every recognition event (deduplicated to once per 8 seconds per person).
-6. **Manage faces** — The **Enrolled Faces** tab lets you view and remove registered people.
-7. **Settings** — Adjust the recognition tolerance slider, select a camera device, or clear the activity log.
-8. **Login (once faces are enrolled)** — Place authorized face images in `app/data/authorized_faces/<name>/` and restart. From then on, the system requires face authentication on every visit.
+### Web Interface
+
+| Page | URL | Access |
+|---|---|---|
+| Dashboard | `/` | All roles |
+| Live Feed | `/recognition` | All roles |
+| Enroll Face | `/enroll` | Admin, Operator |
+| Enrolled Faces | `/faces` | All roles |
+| Activity Log | `/logs` | All roles |
+| User Management | `/users` | Admin only |
+| Settings | `/settings` | Admin, Operator |
+
+1. **Log in** — Navigate to `/auth/login` and enter your credentials, or use **Face Login** to authenticate via webcam.
+2. **Enroll a face** — Go to `/enroll`, enter a name, and either upload an image or click **Capture** to grab a live frame.
+3. **Live feed** — `/recognition` streams video with name labels and confidence scores overlaid on detected faces.
+4. **Activity log** — `/logs` shows a timestamped history of every recognition event. Export as CSV with the download button.
+5. **Manage users** — `/users` (admin only) lets you create, edit roles, disable, and delete accounts.
+6. **Settings** — Adjust the recognition tolerance slider or select a different camera device.
+
+### CLI
+
+`cli.py` provides headless access to the API using JWT tokens — no browser needed. Useful for Raspberry Pi deployments without a display.
+
+```bash
+# Authenticate and store a token locally (~/.faceid/config.json)
+python cli.py login
+
+# Show system status
+python cli.py status
+
+# List enrolled faces
+python cli.py list-faces
+
+# Enroll a face by capturing from the camera (3 frames by default)
+python cli.py enroll "Alice" --frames 5
+
+# Delete a face
+python cli.py delete-face "Alice"
+
+# Show recent recognition logs
+python cli.py logs --limit 20 --name "Alice"
+
+# User management (admin only)
+python cli.py users list
+python cli.py users create
+python cli.py users delete <username>
+
+# Target a different server
+python cli.py --server http://192.168.1.50:5000 status
+```
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/face-login` | Authenticate the current camera frame against authorized faces |
-| `GET` | `/log` | Retrieve the recognition event log (last 50 entries) |
-| `GET` | `/video` | MJPEG video stream with recognition overlays |
-| `GET` | `/snapshot` | Capture a single JPEG frame from the camera |
-| `GET` | `/reload` | Reload face encodings from disk into memory |
-| `GET` | `/faces` | List all enrolled face names |
-| `GET` | `/stats` | System statistics (enrolled count, today's recognitions, camera status) |
-| `GET` | `/cameras` | List available camera device indices |
-| `GET` | `/train/status` | Check the status of an in-progress training job |
-| `POST` | `/enroll` | Enroll a new face (`name` + `image` form fields) |
-| `POST` | `/settings` | Update recognition tolerance at runtime |
-| `POST` | `/cameras/select` | Switch the active camera device |
-| `POST` | `/train` | Submit multiple images for bulk training |
-| `DELETE` | `/faces/<name>` | Remove all encodings for a person |
-| `DELETE` | `/log` | Clear all log entries |
+All API endpoints are prefixed with `/api/`. Auth endpoints use `/auth/`.
+
+Authentication is required on all endpoints unless noted as public. Use either:
+- **Session cookie** — obtained via `POST /auth/login` through the browser
+- **Bearer token** — obtained via `POST /auth/token`, passed as `Authorization: Bearer <token>`
+
+### Authentication
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/auth/login` | Public | Render login page |
+| `POST` | `/auth/login` | Public | Username/password login — sets session cookie |
+| `GET` | `/auth/face-login` | Public | Authenticate via live camera frame |
+| `POST` | `/auth/token` | Public | Issue a JWT for CLI/API use |
+| `GET` | `/auth/logout` | Session | Invalidate session and redirect to login |
+
+**POST /auth/login** — body: `{ "username": "...", "password": "...", "remember": false }`
+
+**POST /auth/token** — body: `{ "username": "...", "password": "..." }` — returns `{ "access_token": "...", "user": {...} }`
+
+### Faces
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `GET` | `/api/faces` | Any | List enrolled faces with encoding counts |
+| `DELETE` | `/api/faces/<name>` | Admin, Operator | Remove all encodings for a person |
+
+**GET /api/faces** response:
+```json
+{
+  "faces": [
+    { "name": "Alice", "count": 3 }
+  ]
+}
+```
+
+### Stream
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/video` | Public | MJPEG stream with recognition overlays |
+| `GET` | `/api/snapshot` | Public | Single JPEG frame from the camera |
+| `GET` | `/api/reload` | Public | Reload face encodings from the database |
+
+> `/api/video` and `/api/snapshot` are intentionally public so the login page camera preview works without a session.
+
+### Logs
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `GET` | `/api/logs` | Any | Paginated recognition event log |
+| `DELETE` | `/api/logs` | Admin | Clear all log entries |
+| `GET` | `/api/logs/export` | Any | Download full log as CSV |
+| `GET` | `/api/stats` | Any | System statistics and chart data |
+
+**GET /api/logs** — query params: `limit` (max 500, default 100), `offset`, `name` (filter by person)
+
+**GET /api/stats** response:
+```json
+{
+  "enrolled_count": 4,
+  "today_recognitions": 12,
+  "camera_connected": true,
+  "hourly": [{ "hour": "09", "count": 3 }],
+  "per_person": [{ "name": "Alice", "count": 8 }]
+}
+```
+
+### Cameras
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `GET` | `/api/cameras` | Any | List available camera device indices |
+| `POST` | `/api/cameras/select` | Admin, Operator | Switch the active camera |
+
+**POST /api/cameras/select** — body: `{ "index": 0 }`
+
+### Settings
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `POST` | `/api/settings` | Admin, Operator | Update recognition settings at runtime |
+
+**POST /api/settings** — body (all fields optional):
+```json
+{
+  "tolerance": 0.5,
+  "show_landmarks": false
+}
+```
+
+### Users
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `GET` | `/api/users` | Admin | List all user accounts |
+| `POST` | `/api/users` | Admin | Create a new user |
+| `PATCH` | `/api/users/<id>` | Admin | Update role, password, email, or active status |
+| `DELETE` | `/api/users/<id>` | Admin | Delete a user account |
+
+**POST /api/users** — body: `{ "username": "...", "password": "...", "role": "operator", "email": "..." }`
+
+**PATCH /api/users/<id>** — body (all fields optional): `{ "role": "...", "password": "...", "email": "...", "is_active": true }`
+
+## Auth & Roles
+
+The system uses role-based access control with three roles:
+
+| Role | Capabilities |
+|---|---|
+| `admin` | Full access — user management, all API endpoints, settings |
+| `operator` | Enroll faces, delete faces, change camera, update settings |
+| `viewer` | Read-only — view faces, logs, stats, and live feed |
+
+Roles are enforced by decorators on every API route. A `403` is returned when a lower-privileged user attempts a restricted action.
 
 ## Configuration
 
+Set these in a `.env` file at the project root. All values have safe defaults for development but **must be changed in production**.
+
 | Variable | Default | Description |
 |---|---|---|
-| `SECRET_KEY` | `very-secure-secret-key` | Flask session secret — **change in production** |
-| `RECOGNITION_TOLERANCE` |`0.5` | The recognition tolerance for training and identification
+| `FLASK_SECRET_KEY` | `change-me-in-production` | Flask session signing key |
+| `JWT_SECRET_KEY` | Same as `FLASK_SECRET_KEY` | JWT signing key (set separately in production) |
+| `DATABASE_URL` | `sqlite:///faceid.db` | SQLAlchemy database URI |
+| `ADMIN_PASSWORD` | `admin` | Password for the auto-created admin account |
+| `RECOGNITION_TOLERANCE` | `0.5` | Initial recognition tolerance (0.30–0.70) |
 
-Recognition tolerance can be adjusted at runtime via the Settings tab (range 0.30–0.70, default 0.50). Lower values require a closer match; higher values are more permissive.
+Example `.env`:
+```env
+FLASK_SECRET_KEY=a-long-random-string-here
+JWT_SECRET_KEY=another-long-random-string
+DATABASE_URL=sqlite:///faceid.db
+ADMIN_PASSWORD=changeme
+RECOGNITION_TOLERANCE=0.5
+```
 
-## First-Run Behaviour
+Recognition tolerance can also be changed at runtime via `POST /api/settings` or the Settings page. Lower values require a closer match; higher values are more permissive.
 
-The system checks for images inside `app/data/authorized_faces/` on every request. While that directory is empty:
+## Default Admin
 
-- All routes are accessible without a login session.
-- The session user is set to `"admin"` automatically.
-- The `/login` page redirects straight to the dashboard.
+On first launch, if the `users` table is empty, the application automatically creates an admin account:
 
-Once you add at least one image to `authorized_faces/`, the login gate activates on the next request.
+- **Username:** `admin`
+- **Password:** value of `ADMIN_PASSWORD` env var (default: `admin`)
+
+Change this password immediately after the first login, either through the Users page or by setting `ADMIN_PASSWORD` before the first run.
 
 ## Deployment Notes
 
 - Tested on **Raspberry Pi 5** with 16 GB RAM and a 256 GB SD card running Debian Trixie (ARM64).
+- The Docker image is built for **ARM64**. It will not run on 32-bit Raspberry Pi OS.
 - A USB webcam must be connected and accessible as `/dev/video0` before starting the container.
-- Activity logs are written to `app/data/recognition_log.json` and capped at 200 events in memory.
+- Use a Docker volume (`-v faceid-data:/app/instance`) to persist the SQLite database across container restarts.
+- Logs are written to `logs/app.log` (rotating, 5 MB max, 5 backups). Mount a volume if you want logs to persist.
 - On Windows, OpenCV uses the DirectShow backend automatically for faster camera access.
+- The `SECRET_KEY` and `JWT_SECRET_KEY` environment variables **must** be set to strong random values in any production or shared deployment.
 
-## Roadmap & Planned Features
-- **New Major Feature**: Proteced Route (API Calls Page)
-- **New Feature**: Account system with privledges
-- **New Feature**: Better logging integration
-- **Critical Bug Fix**: Live feed displaying with zero cameras connected (Dont display live feed if no camera is not connected)
-- **Critical Bug Fix**: Random crashing (Still yet to be debugged)
-- **Optimizations**: Better optimizations for Raspberry Pi and Linux Distributions
+## Roadmap
+
+- **Feature:** Protected API calls page with live demo
+- **Feature:** Per-user activity history and audit trail
+- **Bug Fix:** Suppress live feed when no camera is connected
+- **Bug Fix:** Investigate intermittent recognition service crash
+- **Optimisation:** Reduced memory footprint for Raspberry Pi 4 (4 GB)
+
+## Additional Documentation
+
+| Document | Description |
+|---|---|
+| [docs/api.md](docs/api.md) | Complete API reference — all endpoints, request/response schemas, error codes, WebSocket events |
+| [docs/cli.md](docs/cli.md) | CLI command reference — all commands, options, and examples |
+| [docs/setup.md](docs/setup.md) | Raspberry Pi deployment guide — Docker, environment variables, persistent storage, troubleshooting |
+| [docs/development.md](docs/development.md) | Developer guide — architecture, database migrations, recognition pipeline, adding new routes |
 
 ## License
 
-This project was developed as a university project. All rights reserved.
+Developed as a university project (IFB102 — QUT). All rights reserved.
