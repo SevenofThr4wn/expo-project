@@ -4,3 +4,7 @@ __pycache__/
 .git
 node_modules
 checksums.txt
+faceid.db
+faceid.db-shm
+faceid.db-wal
+app.log

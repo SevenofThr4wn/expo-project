@@ -8,7 +8,7 @@ from flask_login import login_user, logout_user, current_user
 from flask_jwt_extended import create_access_token
 
 from app.extensions import db
-from app.models.user import User
+from app.models.user import User, Role
 
 logger = logging.getLogger(__name__)
 
@@ -81,30 +81,39 @@ def face_login():
 
     similarities = np.dot(known_embeddings, query_emb)
 
-    best_idx = int(np.argmax(similarities))
-    best_score = float(similarities([best_idx]))
+    best_idx   = int(np.argmax(similarities))
+    best_score = float(similarities[best_idx])
 
-    if best_score > 0.5:
+    tolerance = float(__import__("os").getenv("RECOGNITION_TOLERANCE", "0.6"))
+    if best_score > (1 - tolerance):
         matched = rows[best_idx]
 
         if matched.user_id:
             user = User.query.get(matched.user_id)
+        else:
+            # No linked account — find by name or auto-create one.
+            name = matched.name
+            user = User.query.filter_by(username=name).first()
+            if not user:
+                user = User(username=name, role=Role.VIEWER, is_active=True)
+                user.set_password(name)
+                db.session.add(user)
+                db.session.flush()
+                logger.info("Auto-created account '%s' via face login", name)
 
-            if user and user.is_active:
-                login_user(user)
-                user.last_login = datetime.utcnow()
-                db.session.commit()
+            # Link every encoding for this name to the (new or found) account.
+            FaceEncoding.query.filter_by(name=name).update({"user_id": user.id})
+            db.session.commit()
 
-                logger.info("Face Login %s (%.3f)", user.username, best_score)
-                return jsonify({
-                    "success": True,
-                    "user": user.to_dict()
-                })
-        logger.info("Face login (unlinked): %s", matched.name)
-        return jsonify({
-            "success": True,
-            "name": matched.name
-        })
+        if user and user.is_active:
+            login_user(user)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
+            logger.info("Face login: %s (score=%.3f)", user.username, best_score)
+            return jsonify({"success": True, "user": user.to_dict()})
+
+        return jsonify({"success": False, "message": "Account is disabled"})
     return jsonify({
         "success": False,
         "message": "Face not recognised"

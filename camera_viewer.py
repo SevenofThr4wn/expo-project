@@ -33,11 +33,10 @@ WIN_W      = 1280
 WIN_H      = 720
 BG         = "#060c1a"
 _POLL_MS   = 33
-_PROCESS_EVERY = 3   # run InsightFace every N frames (same as web app)
+_PROCESS_EVERY = 3 
 
-TOLERANCE = float(os.getenv("RECOGNITION_TOLERANCE", "0.6"))  # threshold = 1 - TOLERANCE
+TOLERANCE = float(os.getenv("RECOGNITION_TOLERANCE", "0.6"))
 
-# Resolve DB path from DATABASE_URL env var (handles sqlite:/// prefix)
 _raw_db = os.getenv("DATABASE_URL", "sqlite:///faceid.db")
 if _raw_db.startswith("sqlite:///"):
     _rel = _raw_db[len("sqlite:///"):]
@@ -51,8 +50,22 @@ else:
 COLOR_KNOWN   = (0, 220, 100)   # BGR green  — recognised person
 COLOR_UNKNOWN = (60,  60, 220)  # BGR red    — unknown face
 
+# 68-point landmark connectivity (ibug/300W convention — same ordering as dlib)
+# Each sub-list is drawn as a polyline.
+_LM68_GROUPS = [
+    list(range(0,  17)),          # jaw line
+    list(range(17, 22)),          # left eyebrow
+    list(range(22, 27)),          # right eyebrow
+    list(range(27, 31)),          # nose bridge
+    list(range(30, 36)),          # nose bottom
+    list(range(36, 42)) + [36],   # left eye  (closed)
+    list(range(42, 48)) + [42],   # right eye (closed)
+    list(range(48, 60)) + [48],   # outer lip (closed)
+    list(range(60, 68)) + [60],   # inner lip (closed)
+]
 
-# ── Encoding store (shared between threads) ───────────────────────────────────
+
+# ── Encoding store ───────────────────────────────────
 _enc_lock  = threading.Lock()
 _encodings: list[np.ndarray] = []
 _names:     list[str]        = []
@@ -102,7 +115,7 @@ def _match(embedding: np.ndarray) -> tuple[str, int]:
     return "unknown", int(score * 100)
 
 
-# ── Drawing (mirrors recognition_service.draw_results) ────────────────────────
+# ── Drawing ────────────────────────
 def _draw_results(frame: np.ndarray, results: list[dict]) -> np.ndarray:
     for r in results:
         left, top, right, bottom = (int(v) for v in r["box"])
@@ -140,10 +153,22 @@ def _draw_results(frame: np.ndarray, results: list[dict]) -> np.ndarray:
         cv2.rectangle(frame, (left, ly + 3), (left + bar_w, ly + 6), (40, 40, 40), -1)
         cv2.rectangle(frame, (left, ly + 3), (left + filled, ly + 6), color, -1)
 
-        # 5-point landmarks
-        kps = r.get("kps")
-        if kps is not None:
-            for x, y in np.array(kps, dtype=np.int32):
+        # 68-point 3D landmarks (x, y, z — drop z for drawing)
+        lm68 = r.get("landmark_3d_68")
+        if lm68 is not None:
+            pts = np.array(lm68, dtype=np.int32)[:, :2]  # (68, 2)
+            for group in _LM68_GROUPS:
+                cv2.polylines(
+                    frame,
+                    [pts[group]],
+                    isClosed=False,
+                    color=(255, 200, 0),
+                    thickness=1,
+                    lineType=cv2.LINE_AA,
+                )
+        elif r.get("kps") is not None:
+            # Fallback: 5-point kps if 1k3d68 model isn't present
+            for x, y in np.array(r["kps"], dtype=np.int32):
                 cv2.circle(frame, (x, y), 2, (255, 200, 0), -1, cv2.LINE_AA)
 
     return frame
@@ -187,7 +212,7 @@ class CameraViewer:
         self.root.bind("<R>", lambda _: threading.Thread(target=load_encodings, daemon=True).start())
         self.root.protocol("WM_DELETE_WINDOW", self._close)
 
-    # ── Camera thread (runs in background) ────────────────────────────────────
+    # ── Camera thread ────────────────────────────────────
     def _capture_loop(self) -> None:
         cap = cv2.VideoCapture(STREAM_URL, cv2.CAP_DSHOW)
         if not cap.isOpened():
@@ -214,10 +239,11 @@ class CameraViewer:
                 for f in faces:
                     name, conf = _match(np.array(f.embedding, dtype=np.float32))
                     last_results.append({
-                        "box":        f.bbox,
-                        "name":       name,
-                        "confidence": conf,
-                        "kps":        getattr(f, "kps", None),
+                        "box":             f.bbox,
+                        "name":            name,
+                        "confidence":      conf,
+                        "kps":             getattr(f, "kps", None),
+                        "landmark_3d_68":  getattr(f, "landmark_3d_68", None),
                     })
 
             _draw_results(frame, last_results)

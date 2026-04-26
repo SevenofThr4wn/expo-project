@@ -73,13 +73,12 @@ The system is built to run on a Raspberry Pi with a USB webcam and is containeri
 - [Flask-Caching]("https://flask-caching.readthedocs.io/) — Placeholder
 - [Flask-Compress](https://github.com/colour-science/flask-compress) — Placeholder
 - [Flask-JWT-Extended](https://flask-jwt-extended.readthedocs.io/) — Bearer token authentication for API/CLI
-- [Flask-Login](https://flask-login.readthedocs.io/) — session-based authentication
+- [Flask-Login](https://flask-login.readthedocs.io/) — Session-based authentication
 - [Flask-Mail](https://flask-mail.readthedocs.io/) — Send email alerts, scheduled report delivery. Configured via .env SMTP settings.
 - [Flask-SocketIO](https://flask-socketio.readthedocs.io/) + [gevent](https://www.gevent.org) — WebSocket support
-- [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/) + [Flask-Migrate](https://flask-migrate.readthedocs.io/) — database ORM and migrations
+- [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/) + [Flask-Migrate](https://flask-migrate.readthedocs.io/) — Database ORM and migrations
 - [insightface](https://github.com/deepinsight/insightface) — facial encoding and matching
 - [OpenCV](https://opencv.org/) — video capture and frame processing
-- [dlib](http://dlib.net/) — face detection backbone
 - [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/) — numerical and image processing
 - [colorlog](https://pypi.org/project/colorlog/) — coloured console logging
 
