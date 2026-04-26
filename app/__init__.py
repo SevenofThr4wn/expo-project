@@ -26,7 +26,7 @@ def _setup_logging():
     root.addHandler(console_handler)
     root.addHandler(file_handler)
 
-    for noisy in ("werkzeug", "face_recognition_models", "socketio", "engineio"):
+    for noisy in ("werkzeug", "socketio", "engineio", "insightface", "onnxruntime"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
@@ -109,8 +109,8 @@ def create_app():
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", app.config["SECRET_KEY"])
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
     app.config["FACE_RECOGNITION_THRESHOLD"] = float(
-    os.getenv("FACE_RECOGNITION_THRESHOLD", 0.35)
-)
+        os.getenv("FACE_RECOGNITION_THRESHOLD", 0.6)
+    )
 
     # ── Flask-Caching ─────────────────────────────────────────────────────────
     app.config["CACHE_TYPE"] = "SimpleCache"

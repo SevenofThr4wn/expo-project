@@ -1,0 +1,202 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  Light theme overrides — applied when <html data-theme="light">
+//  libsass compiles SCSS variables to literal hex in the output, so we
+//  override the relevant selectors directly here rather than relying on
+//  CSS custom properties being picked up by compiled rules.
+// ══════════════════════════════════════════════════════════════════════════════
+
+[data-theme="light"] {
+
+  // ── CSS custom properties (used by JS at runtime) ──────────────────────────
+  --bg-deep:      #f8fafc;
+  --bg-base:      #f1f5f9;
+  --bg-elevated:  #e2e8f0;
+  --bg-card:      #ffffff;
+  --bg-input:     #f8fafc;
+  --border:       #cbd5e1;
+  --border-hover: #94a3b8;
+  --text-1:       #0f172a;
+  --text-2:       #334155;
+  --text-3:       #64748b;
+
+  // ── Base ───────────────────────────────────────────────────────────────────
+  body {
+    background: #f8fafc;
+    color: #0f172a;
+  }
+
+  // ── Sidebar ────────────────────────────────────────────────────────────────
+  .sidebar {
+    background: rgba(241, 245, 249, 0.94);
+    border-right-color: #cbd5e1;
+
+    &::after {
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(99, 102, 241, 0.18) 40%,
+        rgba(99, 102, 241, 0.18) 60%,
+        transparent
+      );
+    }
+
+    &-brand { border-bottom-color: #cbd5e1; }
+    &-footer { border-top-color: #cbd5e1; }
+  }
+
+  .brand-name {
+    background: linear-gradient(135deg, #0f172a, #334155);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .nav-item {
+    a { color: #334155; }
+    a:hover { background: rgba(226, 232, 240, 0.8); color: #0f172a; }
+    &.active a { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+  }
+
+  .user-name { color: #0f172a; }
+  .logout-btn { color: #64748b; }
+  .sidebar-toggle-btn { color: #64748b; }
+  .theme-toggle-btn   { color: #64748b; }
+
+  // ── Page shell ─────────────────────────────────────────────────────────────
+  .page-header {
+    background: linear-gradient(to bottom, #f1f5f9, rgba(241, 245, 249, 0.6));
+    border-bottom-color: #cbd5e1;
+  }
+
+  .page-title    { color: #0f172a; }
+  .page-subtitle { color: #64748b; }
+
+  // ── Cards ──────────────────────────────────────────────────────────────────
+  .dash-card, .panel-card, .settings-card, .stat-card, .modal-card {
+    background: #ffffff;
+    border-color: #cbd5e1;
+  }
+
+  .card-title    { color: #0f172a; }
+  .section-title { color: #0f172a; }
+  .modal-title   { color: #0f172a; }
+  .modal-hint    { color: #334155; }
+
+  // ── Stat cards ─────────────────────────────────────────────────────────────
+  .stat-num { color: #0f172a; }
+  .stat-lbl { color: #64748b; }
+  .stat-icon {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.3);
+    &.accent2 { background: rgba(6, 182, 212, 0.08); border-color: rgba(6, 182, 212, 0.3); }
+    &.accent3 { background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.3); }
+  }
+
+  // ── Typography helpers ─────────────────────────────────────────────────────
+  .ts         { color: #64748b; }
+  .hint-text  { color: #64748b; }
+  .field-label{ color: #64748b; }
+  .form-label { color: #334155; }
+  .form-hint  { color: #64748b; }
+  .ev-name    { color: #0f172a; }
+  .ev-time, .ev-conf { color: #64748b; }
+
+  // ── Inputs ─────────────────────────────────────────────────────────────────
+  .input-field {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+    &:focus { border-color: #6366f1; }
+  }
+
+  // ── Tables ─────────────────────────────────────────────────────────────────
+  .data-table {
+    th  { color: #64748b; border-bottom-color: #cbd5e1; }
+    td  { color: #0f172a; border-bottom-color: #e2e8f0; }
+    tbody tr:hover { background: #f1f5f9; }
+  }
+
+  .empty-row { color: #64748b; }
+
+  // ── Buttons ────────────────────────────────────────────────────────────────
+  .btn-secondary {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #cbd5e1;
+    &:hover:not(:disabled) { border-color: #6366f1; color: #6366f1; }
+  }
+
+  .btn-ghost {
+    color: #334155;
+    border-color: #cbd5e1;
+    &:hover:not(:disabled) { background: #e2e8f0; color: #0f172a; }
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  .toast {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  .modal-card {
+    background: #ffffff;
+    border-color: #cbd5e1;
+  }
+
+  // ── Misc components ────────────────────────────────────────────────────────
+  .colour-picker { border-color: #cbd5e1; }
+  .colour-hex    { color: #334155; }
+
+  .key-reveal-box {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  .action-tag { background: rgba(99, 102, 241, 0.08); }
+  .detail-blob { color: #64748b; }
+
+  .events-list li { border-bottom-color: #e2e8f0; }
+  .events-empty   { color: #64748b; }
+
+  // ── Health page gauge ──────────────────────────────────────────────────────
+  .health-card {
+    background: #ffffff;
+    border-color: #cbd5e1;
+  }
+
+  .gauge-bar { background: #e2e8f0; }
+
+  // ── Group card ─────────────────────────────────────────────────────────────
+  .group-card {
+    background: #ffffff;
+    border-color: #cbd5e1;
+  }
+
+  .member-row { border-bottom-color: #e2e8f0; }
+
+  // ── Notification item ──────────────────────────────────────────────────────
+  .notif-item { border-bottom-color: #e2e8f0; }
+  .notif-title { color: #0f172a; }
+  .notif-body  { color: #334155; }
+  .notif-time  { color: #64748b; }
+
+  // ── Skeleton loaders ───────────────────────────────────────────────────────
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #e2e8f0 25%,
+      #f1f5f9 37%,
+      #e2e8f0 63%
+    );
+    background-size: 1600px 100%;
+  }
+
+  // ── Scrollbar ──────────────────────────────────────────────────────────────
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    &:hover { background: #94a3b8; }
+  }
+}

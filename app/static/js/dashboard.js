@@ -113,7 +113,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ── Heatmap ───────────────────────────────────────────────────────────────
+    async function renderHeatmap() {
+        const grid = document.getElementById('heatmapGrid');
+        if (!grid) return;
+
+        try {
+            const matrix = await API.getHeatmap();
+            const days   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const maxVal = Math.max(1, ...matrix.flat());
+
+            let html = '<div class="heatmap-row">'
+                     + '<span class="heatmap-day-label"></span>';
+            for (let h = 0; h < 24; h++) {
+                html += `<span class="heatmap-hour-label">${h % 6 === 0 ? String(h).padStart(2, '0') : ''}</span>`;
+            }
+            html += '</div>';
+
+            matrix.forEach((row, d) => {
+                html += `<div class="heatmap-row"><span class="heatmap-day-label">${days[d]}</span>`;
+                row.forEach(v => {
+                    const a = v > 0 ? Math.max(0.12, (v / maxVal) * 0.85) : 0;
+                    html += `<span class="heatmap-cell" style="background:rgba(99,102,241,${a.toFixed(2)})" title="${v} recognition${v !== 1 ? 's' : ''}"></span>`;
+                });
+                html += '</div>';
+            });
+
+            grid.innerHTML = html;
+        } catch {}
+    }
+
     // ── Boot ──────────────────────────────────────────────────────────────────
     refreshStats();
+    renderHeatmap();
     setInterval(refreshStats, 30_000);
+    setInterval(renderHeatmap, 60_000);
 });

@@ -49,6 +49,11 @@
   --radius:    #{$r-md};
   --radius-sm: #{$r-sm};
   --radius-xs: #{$r-xs};
+
+  // Shadows
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
 }
 
 // 3. Global layout shell (body, sidebar, page header)
@@ -59,3 +64,6 @@
 
 // 5. Page-specific layouts and styles
 @import 'pages';
+
+// 6. Light theme overrides (must be last so specificity wins)
+@import 'light';

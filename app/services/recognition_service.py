@@ -48,9 +48,15 @@ def get_recognizer():
 
 
 class RecognitionService:
-    def __init__(self, tolerance: float = 0.35, show_landmarks: bool = True):
-        self.tolerance = tolerance
-        self.show_landmarks = show_landmarks
+    def __init__(self):
+        # Threshold = 1 - tolerance. ArcFace (buffalo_l) cosine similarities for
+        # the same person in webcam conditions typically range 0.4–0.75, so the
+        # default tolerance of 0.6 (threshold 0.4) is intentionally lenient.
+        # Raise RECOGNITION_TOLERANCE toward 0.7 to tighten security.
+        self.tolerance: float = float(
+            __import__("os").getenv("RECOGNITION_TOLERANCE", "0.6")
+        )
+        self.show_landmarks: bool = True
 
         self._known_encodings = []
         self._known_names = []
@@ -71,24 +77,33 @@ class RecognitionService:
     # ─────────────────────────────────────────────
 
     def refresh_data(self):
-        ctx = _app.app_context() if _app else None
+        # Only push a new app context when we are NOT already inside one.
+        # Pushing a nested context causes Flask-SQLAlchemy's teardown to call
+        # db.session.remove() when the inner context pops, which closes the
+        # session mid-request and can leave _known_encodings stale.
+        ctx = None
         try:
-            if ctx:
+            from flask import current_app as _cur
+            _cur._get_current_object()   # raises RuntimeError if no context
+        except RuntimeError:
+            if _app:
+                ctx = _app.app_context()
                 ctx.push()
 
+        try:
             from app.models.face_encoding import FaceEncoding
 
             rows = FaceEncoding.query.all()
 
-            enc = [np.array(r.encoding, dtype=np.float32) for r in rows]
+            enc   = [np.array(r.encoding, dtype=np.float32) for r in rows]
             names = [r.name for r in rows]
 
             with self._data_lock:
                 self._known_encodings = enc
-                self._known_names = names
+                self._known_names     = names
 
             logger.info(
-                "Face data refreshed: %d encodings, %d people",
+                "Face data refreshed: %d encodings, %d unique people",
                 len(enc),
                 len(set(names)),
             )
@@ -181,6 +196,10 @@ class RecognitionService:
         if score > (1 - self.tolerance):
             return known_names[best], int(score * 100)
 
+        logger.debug(
+            "No match: best='%s' score=%.3f threshold=%.3f",
+            known_names[best], score, 1 - self.tolerance,
+        )
         return "unknown", int(score * 100)
 
     def match_face(self, encoding):
@@ -246,42 +265,48 @@ class RecognitionService:
 
     def draw_results(self, frame, results):
         for result in results:
-            top, right, bottom, left = result["box"]
+            # InsightFace bbox is [x1, y1, x2, y2]
+            box = result["box"]
+            left, top, right, bottom = int(box[0]), int(box[1]), int(box[2]), int(box[3])
 
             name = result["name"]
             confidence = result["confidence"]
             color = COLOR_KNOWN if name != "unknown" else COLOR_UNKNOWN
 
-            cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+            # Outer bounding box
+            cv2.rectangle(frame, (left, top), (right, bottom), color, 1, cv2.LINE_AA)
 
-            label = f"{name} {confidence}%"
+            # Corner accent marks
+            cl, ct = 14, 2
+            for ox, oy, hx, vy in [
+                (left,  top,    left + cl,  top + cl),
+                (right, top,    right - cl, top + cl),
+                (left,  bottom, left + cl,  bottom - cl),
+                (right, bottom, right - cl, bottom - cl),
+            ]:
+                cv2.line(frame, (ox, oy), (hx, oy), color, ct, cv2.LINE_AA)
+                cv2.line(frame, (ox, oy), (ox, vy), color, ct, cv2.LINE_AA)
 
-            (tw, th), _ = cv2.getTextSize(
-                label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
-            )
-
-            cv2.rectangle(
-                frame,
-                (left, top - th - 10),
-                (left + tw + 10, top),
-                color,
-                -1,
-            )
-
+            # Label pill
+            label = f"{name}  {confidence}%"
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.52, 1)
+            ly = top - 10 if top > 34 else bottom + th + 10
+            cv2.rectangle(frame, (left, ly - th - 6), (left + tw + 10, ly + 2), color, -1)
             cv2.putText(
-                frame,
-                label,
-                (left + 5, top - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                2,
+                frame, label, (left + 5, ly - 1),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.52, (255, 255, 255), 1, cv2.LINE_AA,
             )
 
-            # landmarks (InsightFace 5-point)
+            # Confidence bar
+            bar_w = tw + 10
+            filled = int(bar_w * confidence / 100)
+            cv2.rectangle(frame, (left, ly + 3), (left + bar_w, ly + 6), (40, 40, 40), -1)
+            cv2.rectangle(frame, (left, ly + 3), (left + filled, ly + 6), color, -1)
+
+            # Landmarks (InsightFace 5-point kps)
             if result.get("landmarks") is not None and self.show_landmarks:
                 lm = np.array(result["landmarks"], dtype=np.int32)
                 for x, y in lm:
-                    cv2.circle(frame, (x, y), 2, (255, 200, 0), -1)
+                    cv2.circle(frame, (x, y), 2, (255, 200, 0), -1, cv2.LINE_AA)
 
         return frame

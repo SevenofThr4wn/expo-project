@@ -81,8 +81,15 @@ $r-full: 999px;
 $sidebar-w: 216px;
 
 // ── Typography ────────────────────────────────────────────────────────────────
-$font-stack: 'Segoe UI', system-ui, -apple-system, sans-serif;
+$font-stack: 'Inter', system-ui, -apple-system, sans-serif;
 $mono-stack: 'Consolas', 'Courier New', monospace;
+
+// ── Glass / depth ─────────────────────────────────────────────────────────────
+$glass-bg:     rgba(11, 18, 36, 0.82);
+$glass-border: rgba(30, 45, 74, 0.7);
+$shadow-sm:    0 1px 3px rgba(0,0,0,.4);
+$shadow-md:    0 4px 16px rgba(0,0,0,.45);
+$shadow-lg:    0 8px 32px rgba(0,0,0,.5);
 
 // ── @each source maps (used in _components.scss) ─────────────────────────────
 // SCSS feature 2 (maps) — these power the @each loops for variant classes.
