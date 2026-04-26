@@ -2,6 +2,7 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV SASS_VERSION=1.77.8
 
 WORKDIR /app
 
@@ -22,7 +23,7 @@ RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="x64"; \
     elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; \
     else echo "Unsupported arch: $ARCH" && exit 1; fi && \
-    curl -L https://github.com/sass/dart-sass/releases/latest/download/dart-sass-linux-${ARCH}.tar.gz \
+    curl -fL https://github.com/sass/dart-sass/releases/download/${SASS_VERSION}/dart-sass-${SASS_VERSION}-linux-${ARCH}.tar.gz \
     -o dart-sass.tar.gz && \
     tar -xzf dart-sass.tar.gz && \
     mv dart-sass /opt/dart-sass && \
@@ -38,7 +39,7 @@ RUN pip install --upgrade pip \
 # ── App files ───────────────────────────────────────────────
 COPY . .
 
-# ── Compile SCSS at build time (NOT runtime) ────────────────
+# ── Compile SCSS at build time ──────────────────────────────
 RUN sass app/static/scss/styles.scss app/static/css/styles.css --style=compressed
 
 # ── Non-root user ───────────────────────────────────────────
