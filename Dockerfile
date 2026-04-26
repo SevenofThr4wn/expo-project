@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+# ── System deps ─────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -13,15 +14,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxrender1 \
     libxext6 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Install Dart Sass (standalone binary) ───────────────────
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then ARCH="x64"; \
+    elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; \
+    else echo "Unsupported arch: $ARCH" && exit 1; fi && \
+    curl -L https://github.com/sass/dart-sass/releases/latest/download/dart-sass-linux-${ARCH}.tar.gz \
+    -o dart-sass.tar.gz && \
+    tar -xzf dart-sass.tar.gz && \
+    mv dart-sass /opt/dart-sass && \
+    ln -s /opt/dart-sass/sass /usr/local/bin/sass && \
+    rm dart-sass.tar.gz
+
+# ── Python deps ─────────────────────────────────────────────
 COPY requirements.txt .
 
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
+# ── App files ───────────────────────────────────────────────
 COPY . .
 
+# ── Compile SCSS at build time (NOT runtime) ────────────────
+RUN sass app/static/scss/styles.scss app/static/css/styles.css --style=compressed
+
+# ── Non-root user ───────────────────────────────────────────
 RUN useradd -m appuser
 USER appuser
 

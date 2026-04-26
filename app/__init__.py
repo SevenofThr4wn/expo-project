@@ -65,31 +65,23 @@ def _configure_sqlite_pragmas(app):
 
 
 def _compile_scss(app):
-    """Compile the SCSS design system to CSS at startup via libsass."""
-    try:
-        import sass
-    except ImportError:
-        logging.getLogger(__name__).warning("libsass not installed — SCSS skipped")
+    """Compile SCSS only in development using Dart Sass."""
+    if not app.debug:
         return
+
+    import subprocess
+    import os
 
     scss_entry = os.path.join(app.static_folder, "scss", "styles.scss")
     css_output = os.path.join(app.static_folder, "css", "styles.css")
-    os.makedirs(os.path.dirname(css_output), exist_ok=True)
-
-    if not os.path.exists(scss_entry):
-        logging.getLogger(__name__).warning("SCSS entry not found: %s", scss_entry)
-        return
 
     try:
-        css = sass.compile(
-            filename=scss_entry,
-            output_style="nested" if app.debug else "compressed",
+        subprocess.run(
+            ["sass", scss_entry, css_output],
+            check=True
         )
-        with open(css_output, "w", encoding="utf-8") as fh:
-            fh.write(css)
-        logging.getLogger(__name__).info("SCSS compiled -> %s", css_output)
     except Exception as exc:
-        logging.getLogger(__name__).error("SCSS compilation failed: %s", exc)
+        print(f"SCSS compile failed: {exc}")
 
 
 def create_app():
