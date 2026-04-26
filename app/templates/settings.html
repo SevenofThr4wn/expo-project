@@ -68,6 +68,67 @@
         <p class="status-msg" :class="camMsgOk ? 'status-ok' : 'status-err'" x-show="cameraMsg" x-text="cameraMsg"></p>
     </div>
 
+    <!-- ── Advanced recognition ──────────────────────────────────────── -->
+    <div class="settings-card">
+        <h3 class="settings-section-title">Advanced Recognition</h3>
+
+        <div class="setting-row">
+            <div>
+                <div class="setting-label">Detection Scale</div>
+                <div class="setting-hint">Resize factor for face detection &nbsp;(0.25 – 1.0). Lower = faster.</div>
+            </div>
+            <div class="slider-group">
+                <input type="range" x-model.number="detectionScale" min="25" max="100" step="5" class="slider">
+                <span class="slider-val" x-text="(detectionScale / 100).toFixed(2)"></span>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div>
+                <div class="setting-label">Log Cooldown</div>
+                <div class="setting-hint">Minimum seconds between duplicate log entries for the same person</div>
+            </div>
+            <div class="slider-group">
+                <input type="range" x-model.number="logCooldown" min="1" max="120" class="slider">
+                <span class="slider-val" x-text="logCooldown + 's'"></span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-fixed" @click="saveAdvanced" :disabled="savingAdv">
+            <span x-text="savingAdv ? 'Saving…' : 'Save'"></span>
+        </button>
+        <p class="status-msg" :class="advOk ? 'status-ok' : 'status-err'" x-show="advMsg" x-text="advMsg"></p>
+    </div>
+
+    <!-- ── Settings profiles ──────────────────────────────────────────── -->
+    {% if current_user.role in ['admin', 'operator'] %}
+    <div class="settings-card">
+        <h3 class="settings-section-title">Settings Profiles</h3>
+        <p class="setting-hint" style="margin-bottom:12px">Save and restore named snapshots of all recognition settings.</p>
+
+        <div class="profile-row">
+            <input type="text" x-model="newProfileName" class="input-field input-sm" placeholder="Profile name…" maxlength="64">
+            <button class="btn btn-ghost btn-sm" @click="saveProfile" :disabled="!newProfileName.trim()">Save Current</button>
+        </div>
+
+        <ul class="profile-list">
+            <template x-if="profiles.length === 0">
+                <li class="setting-hint">No profiles saved yet.</li>
+            </template>
+            <template x-for="p in profiles" :key="p.id">
+                <li class="profile-item">
+                    <span class="profile-name" x-text="p.name"></span>
+                    <span class="badge badge-success" x-show="p.is_active">Active</span>
+                    <div class="profile-actions">
+                        <button class="btn btn-ghost btn-xs" @click="applyProfile(p.id)">Apply</button>
+                        <button class="btn btn-danger btn-xs" @click="deleteProfile(p.id)">Delete</button>
+                    </div>
+                </li>
+            </template>
+        </ul>
+    </div>
+    {% endif %}
+
     <!-- ── Danger zone ─────────────────────────────────────────────────── -->
     {% if current_user.is_admin %}
     <div class="settings-card danger-zone">
@@ -86,9 +147,14 @@ function settingsApp() {
     return {
         tolerance: 50,
         showLandmarks: true,
+        detectionScale: 50,
+        logCooldown: 8,
         saving: false,
+        savingAdv: false,
         statusOk: true,
+        advOk: true,
         recognitionMsg: '',
+        advMsg: '',
         cameras: [],
         selectedCamera: '',
         activeCamera: null,
@@ -97,6 +163,14 @@ function settingsApp() {
         scanning: false,
         cameraMsg: '',
         camMsgOk: true,
+        profiles: [],
+        newProfileName: '',
+
+        async init() {
+            {% if current_user.role in ['admin', 'operator'] %}
+            this.loadProfiles();
+            {% endif %}
+        },
 
         async saveRecognition() {
             this.saving = true;
@@ -109,6 +183,51 @@ function settingsApp() {
                 this.statusOk = !r.error;
             } catch { this.recognitionMsg = 'Failed to save.'; this.statusOk = false; }
             finally { this.saving = false; }
+        },
+
+        async saveAdvanced() {
+            this.savingAdv = true;
+            try {
+                const r = await API.saveSettings({
+                    detection_scale: this.detectionScale / 100,
+                    log_cooldown: this.logCooldown,
+                });
+                this.advMsg = r.message || 'Saved.';
+                this.advOk = !r.error;
+            } catch { this.advMsg = 'Failed to save.'; this.advOk = false; }
+            finally { this.savingAdv = false; }
+        },
+
+        async loadProfiles() {
+            try {
+                const d = await API.getProfiles();
+                this.profiles = d.profiles || [];
+            } catch {}
+        },
+
+        async saveProfile() {
+            const name = this.newProfileName.trim();
+            if (!name) return;
+            const r = await API.createProfile({ name });
+            if (r.error) { toast(typeof r.error === 'string' ? r.error : 'Error', 'error'); return; }
+            toast(r.message, 'success');
+            this.newProfileName = '';
+            this.loadProfiles();
+        },
+
+        async applyProfile(id) {
+            const r = await API.applyProfile(id);
+            if (r.error) { toast(r.error, 'error'); return; }
+            toast(r.message, 'success');
+            this.loadProfiles();
+        },
+
+        async deleteProfile(id) {
+            if (!confirm('Delete this profile?')) return;
+            const r = await API.deleteProfile(id);
+            if (r.error) { toast(r.error, 'error'); return; }
+            toast(r.message, 'success');
+            this.loadProfiles();
         },
 
         async scanCameras() {

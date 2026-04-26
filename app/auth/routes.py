@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 
 import numpy as np
-import face_recognition
+from app.services.face_engine import get_face_app
 from flask import Blueprint, request, jsonify, redirect, url_for, render_template
 from flask_login import login_user, logout_user, current_user
 from flask_jwt_extended import create_access_token
@@ -50,51 +50,65 @@ def login():
 @auth_bp.route("/face-login", methods=["GET"])
 def face_login():
     """Match a live camera frame against enrolled face encodings."""
+    
     from app.services.camera_service import get_camera
     from app.models.face_encoding import FaceEncoding
-    from app.extensions import db
 
     camera = get_camera()
     if not camera.connected:
         camera.start()
-
+    
     frame = camera.read()
     if frame is None:
-        return jsonify({"error": "Camera unavailable"}), 500
+        return jsonify({"error": "Camera unavailable"}, 500)
+    
+    face_app = get_face_app()
+    faces = face_app.get(frame)
 
-    rgb = frame[:, :, ::-1]
-    encodings = face_recognition.face_encodings(rgb)
-
-    if not encodings:
-        return jsonify({"success": False, "message": "No face detected"})
-
+    if not faces:
+        return jsonify({"success": False, "message": "no face detected"})
+    
     rows = FaceEncoding.query.all()
     if not rows:
         return jsonify({"success": False, "message": "No faces enrolled"})
+    
+    known_embeddings = np.array([r.encoding for r in rows])
 
-    known = [r.encoding for r in rows]
+    query_emb = faces[0].embedding
 
-    for enc in encodings:
-        distances = face_recognition.face_distance(known, enc)
-        best = int(np.argmin(distances))
+    query_emb = query_emb / np.linalg.norm(query_emb)
+    known_embeddings = known_embeddings / np.linalg.norm(known_embeddings, axis=1, keepdims=True)
 
-        if distances[best] < 0.5:
-            matched = rows[best]
+    similarities = np.dot(known_embeddings, query_emb)
 
-            if matched.user_id:
-                user = User.query.get(matched.user_id)
-                if user and user.is_active:
-                    login_user(user)
-                    user.last_login = datetime.utcnow()
-                    db.session.commit()
-                    logger.info("Face login for user '%s'", user.username)
-                    return jsonify({"success": True, "user": user.to_dict()})
+    best_idx = int(np.argmax(similarities))
+    best_score = float(similarities([best_idx]))
 
-            logger.info("Face login for unlinked name '%s'", matched.name)
-            return jsonify({"success": True, "name": matched.name})
+    if best_score > 0.5:
+        matched = rows[best_idx]
 
-    return jsonify({"success": False, "message": "Face not recognised"})
+        if matched.user_id:
+            user = User.query.get(matched.user_id)
 
+            if user and user.is_active:
+                login_user(user)
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+
+                logger.info("Face Login %s (%.3f)", user.username, best_score)
+                return jsonify({
+                    "success": True,
+                    "user": user.to_dict()
+                })
+        logger.info("Face login (unlinked): %s", matched.name)
+        return jsonify({
+            "success": True,
+            "name": matched.name
+        })
+    return jsonify({
+        "success": False,
+        "message": "Face not recognised"
+    })
 
 @auth_bp.route("/logout")
 def logout():

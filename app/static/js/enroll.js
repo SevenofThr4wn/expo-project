@@ -95,12 +95,13 @@ function enrollApp() {
             if (ok > 0) {
                 this.statusMsg = `${ok} frame(s) enrolled successfully${fail ? `, ${fail} failed` : ''}.`;
                 this.statusOk  = true;
+                const enrolledName = this.name;
                 // Clean up previews
                 this.captures.forEach(c => URL.revokeObjectURL(c.url));
                 this.captures = [];
                 this.name     = '';
                 this.lastQuality = 0;
-                toast(`${ok} frame(s) enrolled for '${this.name || 'person'}'.`, 'success');
+                toast(`${ok} frame(s) enrolled for '${enrolledName}'.`, 'success');
             } else {
                 this.statusMsg = `Enrollment failed — ${fail} frame(s) had no detectable face.`;
                 this.statusOk  = false;

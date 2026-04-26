@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Profile — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title" id="personName">Loading…</h1>
+        <span class="page-subtitle" id="personMeta">&mdash;</span>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('pages.faces_page') }}" class="btn btn-ghost btn-sm">← All Faces</a>
+        {% if current_user.role in ['admin', 'operator'] %}
+        <button class="btn btn-danger btn-sm" id="deletePersonBtn" style="display:none">Remove All Encodings</button>
+        {% endif %}
+    </div>
+</div>
+
+<div id="profileContent">
+    <div class="loading-placeholder">Loading profile…</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const personName = decodeURIComponent(location.pathname.split('/').pop());
+
+async function loadProfile() {
+    const content = document.getElementById('profileContent');
+    try {
+        const d = await fetch(`/api/person/${encodeURIComponent(personName)}`).then(r => r.json());
+        if (d.error) {
+            content.innerHTML = `<div class="faces-empty">${d.error}</div>`;
+            return;
+        }
+
+        document.getElementById('personName').textContent = d.name;
+        document.getElementById('personMeta').textContent =
+            `First seen ${new Date(d.first_seen).toLocaleDateString()} · Last seen ${new Date(d.last_seen).toLocaleString()}`;
+
+        {% if current_user.role in ['admin', 'operator'] %}
+        document.getElementById('deletePersonBtn').style.display = '';
+        {% endif %}
+
+        const confClass = d.avg_confidence >= 80 ? 'badge-success' : d.avg_confidence >= 60 ? 'badge-warn' : 'badge-danger';
+        const qualityClass = d.encoding_count >= 8 ? 'q-strong' : d.encoding_count >= 4 ? 'q-good' : d.encoding_count >= 2 ? 'q-fair' : 'q-poor';
+        const qualityLabel = d.encoding_count >= 8 ? 'Strong' : d.encoding_count >= 4 ? 'Good' : d.encoding_count >= 2 ? 'Fair' : 'Weak';
+
+        content.innerHTML = `
+            <!-- Stat cards -->
+            <div class="stat-card-grid" style="margin-bottom:24px">
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-num">${d.total_recognitions.toLocaleString()}</div>
+                        <div class="stat-lbl">Total Recognitions</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-num">
+                            <span class="badge ${confClass}">${d.avg_confidence}%</span>
+                        </div>
+                        <div class="stat-lbl">Avg Confidence</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-num">
+                            <span class="${qualityClass}" style="font-weight:600">${d.encoding_count} <small style="font-size:.6em;font-weight:400">(${qualityLabel})</small></span>
+                        </div>
+                        <div class="stat-lbl">Face Encodings</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent events -->
+            <div class="dash-card">
+                <div class="card-head">
+                    <h3 class="card-title">Recent Recognition Events</h3>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>Confidence</th><th>Time</th></tr></thead>
+                        <tbody>
+                        ${d.recent_events.map(e => {
+                            const cc = e.confidence >= 80 ? 'badge-success' : e.confidence >= 60 ? 'badge-warn' : 'badge-danger';
+                            return `<tr>
+                                <td><span class="badge ${cc}">${e.confidence}%</span></td>
+                                <td class="ts">${new Date(e.timestamp).toLocaleString()}</td>
+                            </tr>`;
+                        }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch {
+        content.innerHTML = '<div class="faces-empty">Failed to load profile.</div>';
+    }
+}
+
+{% if current_user.role in ['admin', 'operator'] %}
+document.getElementById('deletePersonBtn').addEventListener('click', async () => {
+    if (!confirm(`Remove all encodings for "${personName}"? This cannot be undone.`)) return;
+    const r = await API.deleteFace(personName);
+    if (r.error) { toast(r.error, 'error'); return; }
+    toast(r.message, 'success');
+    setTimeout(() => location.href = '{{ url_for("pages.faces_page") }}', 1200);
+});
+{% endif %}
+
+loadProfile();
+</script>
+{% endblock %}

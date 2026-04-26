@@ -1,0 +1,245 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  FaceID Components — buttons, badges, cards, inputs, tables, toasts
+//  SCSS feature 6: Nesting (button variants, table rows, toast states, dot)
+//  SCSS feature 7: @each loops (badges, quality tiers, role badges)
+//  SCSS feature 5: @extend (badge-pill, card-base, flex-between)
+//  Requires tokens + mixins already imported.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border-radius: $r-sm;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  @include transition(background border-color color);
+  font-family: $font-stack;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  // Nested variant classes via @mixin
+  &-primary   { @include button-variant($accent, #fff, $accent-dim); }
+  &-secondary {
+    @include button-variant($bg-elevated, $text-1);
+    border: 1px solid $border;
+    &:hover:not(:disabled) { border-color: $accent; color: $accent; }
+  }
+  &-ghost {
+    background: transparent;
+    color: $text-2;
+    border: 1px solid $border;
+    &:hover:not(:disabled) { background: $bg-elevated; color: $text-1; }
+  }
+  &-danger { @include outline-button($danger); }
+
+  &-sm { padding: 5px 12px; font-size: 12px; }
+  &-xs { padding: 3px 9px;  font-size: 11px; }
+}
+
+// ── Inputs ────────────────────────────────────────────────────────────────────
+.input-field {
+  width: 100%;
+  padding: 8px 11px;
+  margin-bottom: 9px;
+  border-radius: $r-sm;
+  border: 1px solid $border;
+  background: $bg-input;
+  color: $text-1;
+  font-size: 13px;
+  outline: none;
+  @include transition(border-color);
+  font-family: $font-stack;
+
+  &:focus  { border-color: $accent; }
+  &.input-sm { width: 180px; margin-bottom: 0; }
+}
+
+.frames-input {
+  width: 60px !important;
+  text-align: center;
+  margin-bottom: 0 !important;
+}
+
+// ── Cards ─────────────────────────────────────────────────────────────────────
+.dash-card     { @include card; }
+.panel-card    { @include card(14px); }
+.settings-card { @include card(20px 22px); max-width: 580px; }
+
+.card-head {
+  @extend %flex-between;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  @include card-title-style;
+  margin-bottom: 10px;
+  .card-head & { margin-bottom: 0; }
+}
+
+// ── Badges — generated via @each loop (SCSS feature 7) ───────────────────────
+.badge {
+  @extend %badge-pill;
+  display: inline-block;
+  padding: 2px 9px;
+  font-size: 11px;
+}
+
+// Auto-generates .badge-success, .badge-warn, .badge-danger, .badge-accent
+@each $name, $color in $badge-colors {
+  .badge-#{$name} {
+    background: rgba($color, 0.15);
+    color: $color;
+  }
+}
+
+// ── Role badges — @each loop ──────────────────────────────────────────────────
+.role-badge {
+  @extend %badge-pill;
+  font-size: 10px;
+  padding: 1px 7px;
+  text-transform: capitalize;
+  display: inline-block;
+}
+
+// Auto-generates .role-admin, .role-operator, .role-viewer
+@each $role, $color in $role-colors {
+  .role-#{$role} {
+    background: rgba($color, 0.18);
+    color: $color;
+  }
+}
+
+// ── Quality indicators — @each loop ──────────────────────────────────────────
+.quality-badge {
+  @extend %badge-pill;
+  font-size: 10px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  min-width: 52px;
+  text-align: center;
+  display: inline-block;
+}
+
+// Auto-generates .q-poor, .q-fair, .q-good, .q-strong with badge + fill variants
+@each $tier, $color in $quality-colors {
+  .q-#{$tier} {
+    background: rgba($color, 0.15);
+    color: $color;
+
+    &.quality-badge {
+      background: rgba($color, 0.15);
+      color: $color;
+    }
+  }
+
+  .quality-fill.q-#{$tier},
+  .face-quality-fill.q-#{$tier} {
+    background: $color;
+  }
+}
+
+// ── Status indicators ─────────────────────────────────────────────────────────
+.status-msg { margin-top: 8px; font-size: 12px; min-height: 16px; }
+.status-ok  { color: $success; }
+.status-err { color: $danger; }
+.hint-text  { font-size: 12px; color: $text-3; margin-bottom: 10px; line-height: 1.55; }
+.text-success { color: $success; }
+.text-danger  { color: $danger; }
+
+// ── Live dot / status dot ─────────────────────────────────────────────────────
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $danger;
+  box-shadow: 0 0 6px $danger;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  // Nesting: state modifiers
+  &-online  { background: $success; box-shadow: 0 0 5px $success; animation: blink 2s infinite; }
+  &-offline { background: $danger;  box-shadow: 0 0 5px $danger; }
+}
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $text-3;
+    padding: 10px 12px;
+    border-bottom: 1px solid $border;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid $border;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover   { background: $bg-elevated; }
+}
+
+.empty-row { text-align: center; color: $text-3; padding: 40px !important; }
+.ts        { font-size: 12px; color: $text-3; }
+
+// ── Toast notifications ───────────────────────────────────────────────────────
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: $sp-sm;
+  z-index: 9999;
+}
+
+.toast {
+  padding: 10px 18px;
+  border-radius: $r-sm;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background: $bg-card;
+  border: 1px solid $border;
+  opacity: 0;
+  transform: translateY(12px);
+  @include transition(opacity transform, 0.25s);
+  max-width: 320px;
+
+  // Nesting: state modifiers
+  &.show          { opacity: 1; transform: translateY(0); }
+  &.toast-success { border-color: $success; background: rgba($success, 0.12); }
+  &.toast-error   { border-color: $danger;  background: rgba($danger,  0.12); }
+  &.toast-info    { border-color: $accent;  background: $accent-glow; }
+}
+
+// ── Form helpers ──────────────────────────────────────────────────────────────
+.field-label { font-size: 12px; color: $text-3; margin-bottom: 4px; display: block; }
+.form-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-bottom: 14px; }
+.form-actions { display: flex; gap: $sp-sm; }
+.action-row   { display: flex; gap: 6px; }

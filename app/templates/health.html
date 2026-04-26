@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}System Health — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">System Health</h1>
+        <span class="page-subtitle" id="uptimeLabel">&mdash;</span>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-ghost btn-sm" id="refreshBtn">Refresh</button>
+    </div>
+</div>
+
+<div class="health-grid" id="healthGrid">
+    <div class="loading-placeholder">Loading&hellip;</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fmtUptime(s) {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return `Up ${h}h ${m}m`;
+}
+
+function gauge(pct, label) {
+    const color = pct >= 85 ? 'var(--danger)' : pct >= 65 ? 'var(--warn)' : 'var(--success)';
+    return `
+        <div class="gauge-wrap">
+            <div class="gauge-bar"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
+            <div class="gauge-row">
+                <span class="gauge-label">${label}</span>
+                <span class="gauge-pct" style="color:${color}">${pct.toFixed(1)}%</span>
+            </div>
+        </div>`;
+}
+
+async function loadHealth() {
+    const grid = document.getElementById('healthGrid');
+    try {
+        const d = await fetch('/api/health').then(r => r.json());
+        if (d.error) { grid.innerHTML = `<div class="faces-empty">${d.error}</div>`; return; }
+
+        document.getElementById('uptimeLabel').textContent = fmtUptime(d.uptime_seconds);
+
+        grid.innerHTML = `
+            <!-- CPU & Memory -->
+            <div class="health-card">
+                <h3 class="health-card-title">CPU &amp; Memory</h3>
+                ${gauge(d.cpu_percent, 'CPU Usage')}
+                ${gauge(d.memory.percent, `RAM  ${d.memory.used_mb} / ${d.memory.total_mb} MB`)}
+                <div class="health-stat">Process memory <strong>${d.process_mem_mb} MB</strong></div>
+            </div>
+
+            <!-- Disk -->
+            <div class="health-card">
+                <h3 class="health-card-title">Disk</h3>
+                ${gauge(d.disk.percent, `${d.disk.used_gb} / ${d.disk.total_gb} GB`)}
+            </div>
+
+            <!-- App status -->
+            <div class="health-card">
+                <h3 class="health-card-title">Application</h3>
+                <div class="health-stat-row">
+                    <span>Camera</span>
+                    <span class="badge ${d.camera_connected ? 'badge-success' : 'badge-danger'}">
+                        ${d.camera_connected ? 'Online' : 'Offline'}
+                    </span>
+                </div>
+                <div class="health-stat-row">
+                    <span>Scheduler</span>
+                    <span class="badge ${d.scheduler_running ? 'badge-success' : 'badge-warn'}">
+                        ${d.scheduler_running ? 'Running' : 'Stopped'}
+                    </span>
+                </div>
+                <div class="health-stat-row">
+                    <span>Recognition logs</span>
+                    <strong>${d.db.recognition_logs.toLocaleString()}</strong>
+                </div>
+                <div class="health-stat-row">
+                    <span>Face encodings</span>
+                    <strong>${d.db.face_encodings.toLocaleString()}</strong>
+                </div>
+            </div>
+        `;
+    } catch {
+        grid.innerHTML = '<div class="faces-empty">Failed to load health data.</div>';
+    }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadHealth);
+loadHealth();
+setInterval(loadHealth, 15_000);
+</script>
+{% endblock %}

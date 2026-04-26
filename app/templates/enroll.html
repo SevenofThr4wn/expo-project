@@ -9,8 +9,11 @@
 
 <div class="enroll-layout" x-data="enrollApp()">
 
-    <!-- ── Camera preview ─────────────────────────────────────────────── -->
-    <div class="enroll-camera-col">
+    <!-- ── Camera preview (NOTE: Uncomment only after implementing handling for no active camera feed) ─────────────────────────────────────────────── -->
+
+    <!-- TODO: Handle video feed (currently it crashes the app with no active camera feed)-->
+
+    <!-- <div class="enroll-camera-col">
         <div class="video-wrap">
             <img src="/api/video" alt="Camera preview">
             <div class="feed-badge">PREVIEW</div>
@@ -24,7 +27,7 @@
             </div>
             <span class="quality-score" x-text="lastQuality + '%'"></span>
         </div>
-    </div>
+    </div> -->
 
     <!-- ── Enroll form ─────────────────────────────────────────────────── -->
     <div class="enroll-form-col">

@@ -35,8 +35,8 @@ async function loadFaces() {
 
         grid.innerHTML = faces.map(f => `
             <div class="face-card" data-name="${f.name}">
-                <div class="face-avatar">${f.name[0].toUpperCase()}</div>
-                <div class="face-name">${f.name}</div>
+                <a href="/person/${encodeURIComponent(f.name)}" class="face-avatar" title="View profile">${f.name[0].toUpperCase()}</a>
+                <a href="/person/${encodeURIComponent(f.name)}" class="face-name">${f.name}</a>
                 <div class="face-encodings">${f.count} encoding${f.count !== 1 ? 's' : ''}</div>
                 <div class="face-quality-bar">
                     <div class="face-quality-fill ${f.count >= 8 ? 'q-strong' : f.count >= 4 ? 'q-good' : f.count >= 2 ? 'q-fair' : 'q-poor'}"

@@ -1,0 +1,108 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  FaceID Design Tokens
+//  SCSS feature 1: Variables
+//  SCSS feature 2: Maps
+//  All raw values live here. Every other partial imports this via styles.scss.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Background color map ──────────────────────────────────────────────────────
+$bg-colors: (
+  deep:     #060c1a,
+  base:     #0b1224,
+  elevated: #111b30,
+  card:     #162038,
+  input:    #0f1a2e,
+);
+
+$border-colors: (
+  default: #1e2d4a,
+  hover:   #2e4070,
+);
+
+$accent-colors: (
+  primary: #6366f1,
+  dim:     #4f46e5,
+  cyan:    #06b6d4,
+  violet:  #8b5cf6,
+);
+
+$semantic-colors: (
+  success: #10b981,
+  warn:    #f59e0b,
+  danger:  #ef4444,
+);
+
+$text-colors: (
+  primary:   #f1f5f9,
+  secondary: #94a3b8,
+  muted:     #64748b,
+);
+
+// ── Flat shorthand variables (derived from maps) ──────────────────────────────
+$bg-deep:      map-get($bg-colors, deep);
+$bg-base:      map-get($bg-colors, base);
+$bg-elevated:  map-get($bg-colors, elevated);
+$bg-card:      map-get($bg-colors, card);
+$bg-input:     map-get($bg-colors, input);
+$border:       map-get($border-colors, default);
+$border-hover: map-get($border-colors, hover);
+
+$accent:      map-get($accent-colors, primary);
+$accent-dim:  map-get($accent-colors, dim);
+$accent2:     map-get($accent-colors, cyan);
+$accent3:     map-get($accent-colors, violet);
+$accent-glow: rgba(99, 102, 241, 0.15);
+
+$success: map-get($semantic-colors, success);
+$warn:    map-get($semantic-colors, warn);
+$danger:  map-get($semantic-colors, danger);
+
+$text-1: map-get($text-colors, primary);
+$text-2: map-get($text-colors, secondary);
+$text-3: map-get($text-colors, muted);
+
+// ── Spacing ───────────────────────────────────────────────────────────────────
+$sp-xs:  4px;
+$sp-sm:  8px;
+$sp-md:  12px;
+$sp-lg:  18px;
+$sp-xl:  24px;
+$sp-2xl: 28px;
+$sp-3xl: 48px;
+
+// ── Border radii ──────────────────────────────────────────────────────────────
+$r-xs:   4px;
+$r-sm:   6px;
+$r-md:   10px;
+$r-lg:   14px;
+$r-full: 999px;
+
+// ── Layout ────────────────────────────────────────────────────────────────────
+$sidebar-w: 216px;
+
+// ── Typography ────────────────────────────────────────────────────────────────
+$font-stack: 'Segoe UI', system-ui, -apple-system, sans-serif;
+$mono-stack: 'Consolas', 'Courier New', monospace;
+
+// ── @each source maps (used in _components.scss) ─────────────────────────────
+// SCSS feature 2 (maps) — these power the @each loops for variant classes.
+
+$badge-colors: (
+  success: $success,
+  warn:    $warn,
+  danger:  $danger,
+  accent:  $accent,
+);
+
+$quality-colors: (
+  poor:   $danger,
+  fair:   $warn,
+  good:   $success,
+  strong: $accent,
+);
+
+$role-colors: (
+  admin:    $danger,
+  operator: $warn,
+  viewer:   $text-2,
+);

@@ -10,14 +10,13 @@ import click
 import requests
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 console = Console()
 
 CONFIG_DIR = os.path.expanduser("~/.faceid")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
-DEFAULT_SERVER = "http://localhost:5000"
+DEFAULT_SERVER = "http://127.0.0.1:5000"
 
 
 # ── Config helpers ─────────────────────────────────────────────────────────────

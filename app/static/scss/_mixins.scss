@@ -1,0 +1,120 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  FaceID Mixins, Functions & Placeholder Extends
+//  SCSS feature 3: @function
+//  SCSS feature 4: @mixin
+//  SCSS feature 5: @extend / %placeholder
+//  Requires: _tokens.scss already imported by the entry point.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Functions (SCSS feature 3) ────────────────────────────────────────────────
+
+// Mix white into a colour — useful for soft tints.
+@function tint($color, $amount) {
+  @return mix(white, $color, $amount);
+}
+
+// Mix black into a colour — useful for hover darken.
+@function shade($color, $amount) {
+  @return mix(black, $color, $amount);
+}
+
+// Convert px to rem assuming 16px base.
+@function rem($px) {
+  @return ($px / 16) * 1rem;
+}
+
+// ── Placeholder selectors (SCSS feature 5: @extend) ──────────────────────────
+
+%reset-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: $font-stack;
+  padding: 0;
+}
+
+%truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+%flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+%flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+%card-base {
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $r-md;
+}
+
+%badge-pill {
+  display: inline-block;
+  border-radius: $r-full;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+// ── Mixins (SCSS feature 4) ───────────────────────────────────────────────────
+
+@mixin card($padding: 18px 20px) {
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $r-md;
+  padding: $padding;
+}
+
+@mixin transition($props: all, $dur: 0.15s, $ease: ease) {
+  transition: $props $dur $ease;
+}
+
+// Generate a filled button variant.
+@mixin button-variant($bg-color, $text-color, $hover-color: null) {
+  background: $bg-color;
+  color: $text-color;
+  &:hover:not(:disabled) {
+    background: if($hover-color, $hover-color, shade($bg-color, 8%));
+  }
+}
+
+// Generate an outlined/ghost button variant.
+@mixin outline-button($color) {
+  background: transparent;
+  color: $color;
+  border: 1px solid $color;
+  &:hover:not(:disabled) {
+    background: $color;
+    color: #fff;
+  }
+}
+
+// Circular avatar helper.
+@mixin avatar($size, $font-size) {
+  width: $size;
+  height: $size;
+  font-size: $font-size;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+// Consistent card-section label.
+@mixin card-title-style {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: $text-3;
+}

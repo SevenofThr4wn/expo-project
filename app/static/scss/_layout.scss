@@ -1,0 +1,190 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  FaceID Layout — Body, sidebar, page shell
+//  SCSS feature 6: Nesting (sidebar BEM, nav-item states, user-chip)
+//  Requires tokens + mixins already imported.
+// ══════════════════════════════════════════════════════════════════════════════
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: $font-stack;
+  background: $bg-deep;
+  color: $text-1;
+  height: 100vh;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+// ── Sidebar (deep nesting) ────────────────────────────────────────────────────
+.sidebar {
+  width: $sidebar-w;
+  background: $bg-base;
+  border-right: 1px solid $border;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  &-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: $sp-lg 16px;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
+  }
+
+  &-footer {
+    padding: $sp-md;
+    border-top: 1px solid $border;
+    display: flex;
+    align-items: center;
+    gap: $sp-sm;
+    flex-shrink: 0;
+  }
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  background: $accent;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.3px;
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+.nav-links {
+  list-style: none;
+  padding: $sp-sm;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-item {
+  // Nesting: hover + active states for nav anchors
+  a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: $r-sm;
+    color: $text-2;
+    font-size: 13px;
+    margin-bottom: 2px;
+    @include transition(background color);
+
+    &:hover {
+      background: $bg-elevated;
+      color: $text-1;
+    }
+  }
+
+  &.active a {
+    background: $accent-glow;
+    color: $accent;
+    font-weight: 600;
+  }
+}
+
+.nav-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.nav-badge {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba($danger, 0.15);
+  color: $danger;
+  padding: 1px 6px;
+  border-radius: $r-full;
+  letter-spacing: 0.4px;
+}
+
+// ── User chip (sidebar footer) ────────────────────────────────────────────────
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: $sp-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-avatar {
+  @include avatar(30px, 13px);
+  background: $accent;
+  color: #fff;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 13px;
+  color: $text-1;
+  @extend %truncate;
+}
+
+.logout-btn {
+  @extend %reset-button;
+  color: $text-3;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: $r-xs;
+  @include transition(color);
+  flex-shrink: 0;
+
+  // Nesting: hover state on logout button
+  &:hover { color: $danger; }
+}
+
+// ── Page header ───────────────────────────────────────────────────────────────
+.page-header {
+  @extend %flex-between;
+  padding: 22px $sp-2xl 14px;
+  flex-shrink: 0;
+  border-bottom: 1px solid $border;
+  background: $bg-base;
+}
+
+.page-title    { font-size: 20px; font-weight: 700; }
+.page-subtitle { font-size: 13px; color: $text-3; margin-top: 2px; display: block; }
+.header-actions { display: flex; align-items: center; gap: $sp-sm; }

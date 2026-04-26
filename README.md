@@ -10,30 +10,33 @@ A real-time facial recognition and access control system with a web dashboard an
 
 ---
 
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-  - [Local Setup](#local-setup)
-  - [Docker (Raspberry Pi)](#docker-raspberry-pi)
-- [Usage](#usage)
-  - [Web Interface](#web-interface)
-  - [CLI](#cli)
-- [API Reference](#api-reference)
-  - [Authentication](#authentication)
-  - [Faces](#faces)
-  - [Stream](#stream)
-  - [Logs](#logs)
-  - [Cameras](#cameras)
-  - [Settings](#settings)
-  - [Users](#users)
-- [Auth & Roles](#auth--roles)
-- [Configuration](#configuration)
-- [Default Admin](#default-admin)
-- [Deployment Notes](#deployment-notes)
-- [Roadmap](#roadmap)
-- [License](#license)
+- [FaceID System | Expo Project — IFB102](#faceid-system--expo-project--ifb102)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Tech Stack](#tech-stack)
+  - [Project Structure](#project-structure)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Local Setup](#local-setup)
+    - [Docker (Raspberry Pi)](#docker-raspberry-pi)
+  - [Usage](#usage)
+    - [Web Interface](#web-interface)
+    - [CLI](#cli)
+  - [API Reference](#api-reference)
+    - [Authentication](#authentication)
+    - [Faces](#faces)
+    - [Stream](#stream)
+    - [Logs](#logs)
+    - [Cameras](#cameras)
+    - [Settings](#settings)
+    - [Users](#users)
+  - [Auth \& Roles](#auth--roles)
+  - [Configuration](#configuration)
+  - [Default Admin](#default-admin)
+  - [Deployment Notes](#deployment-notes)
+  - [Roadmap](#roadmap)
+  - [Additional Documentation](#additional-documentation)
+  - [License](#license)
 
 ---
 
@@ -65,13 +68,16 @@ The system is built to run on a Raspberry Pi with a USB webcam and is containeri
 ## Tech Stack
 
 **Backend**
-- [Flask](https://flask.palletsprojects.com/) — web framework and REST API
-- [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/) + [Flask-Migrate](https://flask-migrate.readthedocs.io/) — database ORM and migrations (SQLite by default)
-- [Flask-Login](https://flask-login.readthedocs.io/) — session-based authentication
+- [Flask](https://flask.palletsprojects.com/) — Web Framework and REST API
+- [Flask-Bcrypt](https://flask-bcrypt.readthedocs.io/) — password encryption & hashing
+- [Flask-Caching]("https://flask-caching.readthedocs.io/) — Placeholder
+- [Flask-Compress](https://github.com/colour-science/flask-compress) — Placeholder
 - [Flask-JWT-Extended](https://flask-jwt-extended.readthedocs.io/) — Bearer token authentication for API/CLI
-- [Flask-Bcrypt](https://flask-bcrypt.readthedocs.io/) — password hashing
-- [Flask-SocketIO](https://flask-socketio.readthedocs.io/) + [eventlet](https://eventlet.net/) — WebSocket support
-- [face_recognition](https://github.com/ageitgey/face_recognition) — facial encoding and matching
+- [Flask-Login](https://flask-login.readthedocs.io/) — session-based authentication
+- [Flask-Mail](https://flask-mail.readthedocs.io/) — Send email alerts, scheduled report delivery. Configured via .env SMTP settings.
+- [Flask-SocketIO](https://flask-socketio.readthedocs.io/) + [gevent](https://www.gevent.org) — WebSocket support
+- [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/) + [Flask-Migrate](https://flask-migrate.readthedocs.io/) — database ORM and migrations
+- [insightface](https://github.com/deepinsight/insightface) — facial encoding and matching
 - [OpenCV](https://opencv.org/) — video capture and frame processing
 - [dlib](http://dlib.net/) — face detection backbone
 - [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/) — numerical and image processing

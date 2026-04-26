@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Face Groups — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Face Groups</h1>
+        <span class="page-subtitle" id="groupCountLabel">&mdash;</span>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-ghost btn-sm" id="refreshBtn">Refresh</button>
+        {% if current_user.role in ['admin', 'operator'] %}
+        <button class="btn btn-primary btn-sm" id="newGroupBtn">+ New Group</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create / Edit modal -->
+<div id="groupModal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+        <h2 class="modal-title" id="modalTitle">New Group</h2>
+        <form id="groupForm">
+            <input type="hidden" id="editGroupId" value="">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" id="groupName" class="input-field" placeholder="e.g. VIP, Staff, Blacklist" maxlength="64" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Colour</label>
+                <div class="colour-row">
+                    <input type="color" id="groupColour" value="#6366f1" class="colour-picker">
+                    <span id="colourHex" class="colour-hex">#6366f1</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="cancelModalBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm" id="saveGroupBtn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Groups grid -->
+<div id="groupsGrid" class="groups-grid">
+    <div class="loading-placeholder">Loading&hellip;</div>
+</div>
+
+<!-- Members panel (shown below selected group) -->
+<div id="membersPanel" style="display:none">
+    <div class="section-header">
+        <h2 class="section-title" id="membersPanelTitle">Members</h2>
+        <div class="header-actions">
+            {% if current_user.role in ['admin', 'operator'] %}
+            <div class="add-member-row">
+                <input type="text" id="addMemberInput" class="input-field input-sm" placeholder="Face name…" list="faceNameList">
+                <datalist id="faceNameList"></datalist>
+                <button class="btn btn-primary btn-sm" id="addMemberBtn">Add</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div id="membersBody" class="members-list"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedGroupId = null;
+let allFaceNames = [];
+
+// ── Fetch faces for datalist autocomplete ─────────────────────────────────────
+async function loadFaceNames() {
+    try {
+        const d = await API.getFaces();
+        allFaceNames = (d.faces || []).map(f => f.name);
+        const dl = document.getElementById('faceNameList');
+        dl.innerHTML = allFaceNames.map(n => `<option value="${n}">`).join('');
+    } catch {}
+}
+
+// ── Groups ────────────────────────────────────────────────────────────────────
+async function loadGroups() {
+    const grid = document.getElementById('groupsGrid');
+    try {
+        const d = await API.getGroups();
+        const groups = d.groups || [];
+        document.getElementById('groupCountLabel').textContent =
+            groups.length === 1 ? '1 group' : `${groups.length} groups`;
+
+        if (!groups.length) {
+            grid.innerHTML = '<div class="faces-empty">No groups yet.</div>';
+            return;
+        }
+
+        grid.innerHTML = groups.map(g => `
+            <div class="group-card" data-id="${g.id}" style="--group-colour:${g.colour}">
+                <div class="group-colour-bar"></div>
+                <div class="group-body">
+                    <div class="group-name">${g.name}</div>
+                    <div class="group-meta">${g.member_count} member${g.member_count !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="group-actions">
+                    <button class="btn btn-ghost btn-xs view-members-btn" data-id="${g.id}" data-name="${g.name}">Members</button>
+                    {% if current_user.role in ['admin', 'operator'] %}
+                    <button class="btn btn-ghost btn-xs edit-group-btn"
+                        data-id="${g.id}" data-name="${g.name}" data-colour="${g.colour}">Edit</button>
+                    <button class="btn btn-danger btn-xs delete-group-btn" data-id="${g.id}" data-name="${g.name}">Delete</button>
+                    {% endif %}
+                </div>
+            </div>
+        `).join('');
+
+        grid.querySelectorAll('.view-members-btn').forEach(btn => {
+            btn.addEventListener('click', () => showMembers(btn.dataset.id, btn.dataset.name));
+        });
+        {% if current_user.role in ['admin', 'operator'] %}
+        grid.querySelectorAll('.edit-group-btn').forEach(btn => {
+            btn.addEventListener('click', () => openEditModal(btn.dataset.id, btn.dataset.name, btn.dataset.colour));
+        });
+        grid.querySelectorAll('.delete-group-btn').forEach(btn => {
+            btn.addEventListener('click', () => deleteGroup(btn.dataset.id, btn.dataset.name));
+        });
+        {% endif %}
+    } catch {
+        grid.innerHTML = '<div class="faces-empty">Failed to load groups.</div>';
+    }
+}
+
+// ── Members panel ─────────────────────────────────────────────────────────────
+async function showMembers(groupId, groupName) {
+    selectedGroupId = groupId;
+    document.getElementById('membersPanelTitle').textContent = `Members — ${groupName}`;
+    document.getElementById('membersPanel').style.display = 'block';
+    await refreshMembers();
+}
+
+async function refreshMembers() {
+    const body = document.getElementById('membersBody');
+    if (!selectedGroupId) return;
+    try {
+        const d = await API.getGroupMembers(selectedGroupId);
+        const members = d.members || [];
+        if (!members.length) {
+            body.innerHTML = '<div class="faces-empty">No members yet.</div>';
+            return;
+        }
+        body.innerHTML = members.map(m => `
+            <div class="member-row">
+                <span class="member-name">${m.face_name}</span>
+                {% if current_user.role in ['admin', 'operator'] %}
+                <button class="btn btn-danger btn-xs remove-member-btn" data-name="${m.face_name}">Remove</button>
+                {% endif %}
+            </div>
+        `).join('');
+        {% if current_user.role in ['admin', 'operator'] %}
+        body.querySelectorAll('.remove-member-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const r = await API.removeGroupMember(selectedGroupId, btn.dataset.name);
+                if (r.error) { toast(r.error, 'error'); return; }
+                toast(r.message, 'success');
+                refreshMembers();
+                loadGroups();
+            });
+        });
+        {% endif %}
+    } catch {
+        body.innerHTML = '<div class="faces-empty">Failed to load members.</div>';
+    }
+}
+
+{% if current_user.role in ['admin', 'operator'] %}
+document.getElementById('addMemberBtn').addEventListener('click', async () => {
+    const name = document.getElementById('addMemberInput').value.trim();
+    if (!name) return;
+    const r = await API.addGroupMember(selectedGroupId, name);
+    if (r.error) { toast(typeof r.error === 'string' ? r.error : JSON.stringify(r.error), 'error'); return; }
+    toast(r.message, 'success');
+    document.getElementById('addMemberInput').value = '';
+    refreshMembers();
+    loadGroups();
+});
+{% endif %}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openCreateModal() {
+    document.getElementById('modalTitle').textContent = 'New Group';
+    document.getElementById('editGroupId').value = '';
+    document.getElementById('groupName').value = '';
+    document.getElementById('groupColour').value = '#6366f1';
+    document.getElementById('colourHex').textContent = '#6366f1';
+    document.getElementById('groupModal').style.display = 'flex';
+}
+
+function openEditModal(id, name, colour) {
+    document.getElementById('modalTitle').textContent = 'Edit Group';
+    document.getElementById('editGroupId').value = id;
+    document.getElementById('groupName').value = name;
+    document.getElementById('groupColour').value = colour;
+    document.getElementById('colourHex').textContent = colour;
+    document.getElementById('groupModal').style.display = 'flex';
+}
+
+document.getElementById('groupColour').addEventListener('input', e => {
+    document.getElementById('colourHex').textContent = e.target.value;
+});
+
+document.getElementById('cancelModalBtn').addEventListener('click', () => {
+    document.getElementById('groupModal').style.display = 'none';
+});
+
+document.getElementById('groupForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = document.getElementById('editGroupId').value;
+    const payload = {
+        name: document.getElementById('groupName').value.trim(),
+        colour: document.getElementById('groupColour').value,
+    };
+    const r = id ? await API.updateGroup(id, payload) : await API.createGroup(payload);
+    if (r.error) { toast(typeof r.error === 'string' ? r.error : JSON.stringify(r.error), 'error'); return; }
+    toast(r.message, 'success');
+    document.getElementById('groupModal').style.display = 'none';
+    loadGroups();
+});
+
+{% if current_user.role in ['admin', 'operator'] %}
+document.getElementById('newGroupBtn').addEventListener('click', openCreateModal);
+{% endif %}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+async function deleteGroup(id, name) {
+    if (!confirm(`Delete group "${name}" and remove all its members?`)) return;
+    const r = await API.deleteGroup(id);
+    if (r.error) { toast(r.error, 'error'); return; }
+    toast(r.message, 'success');
+    if (String(selectedGroupId) === String(id)) {
+        selectedGroupId = null;
+        document.getElementById('membersPanel').style.display = 'none';
+    }
+    loadGroups();
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadGroups);
+
+loadFaceNames();
+loadGroups();
+</script>
+{% endblock %}

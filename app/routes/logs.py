@@ -3,18 +3,21 @@ import io
 import logging
 from datetime import date
 
+import openpyxl
 from flask import Blueprint, jsonify, make_response, request
 
 from app.auth.decorators import api_login_required, role_required
-from app.extensions import db
+from app.extensions import db, cache
 from app.models.face_encoding import FaceEncoding
 from app.models.recognition_log import RecognitionLog
 from app.models.user import Role
-from app.services.camera_service import get_camera
+from app.services.camera_service import camera_is_connected
 
 logger = logging.getLogger(__name__)
 
 logs_bp = Blueprint("logs_api", __name__, url_prefix="/api")
+
+STATS_CACHE_KEY = "api_stats"
 
 
 @logs_bp.route("/logs")
@@ -38,6 +41,7 @@ def get_logs():
 def clear_logs():
     count = RecognitionLog.query.delete()
     db.session.commit()
+    cache.delete(STATS_CACHE_KEY)
     logger.info("Cleared %d recognition log entries", count)
     return jsonify({"message": f"Cleared {count} log entries."})
 
@@ -57,10 +61,84 @@ def export_logs():
     return resp
 
 
+@logs_bp.route("/person/<name>")
+@api_login_required
+def person_stats(name):
+    from app.models.face_encoding import FaceEncoding
+
+    q = RecognitionLog.query.filter_by(face_name=name)
+    total = q.count()
+    if not total:
+        return jsonify({"error": f"No recognition history found for '{name}'"}), 404
+
+    avg_conf = db.session.query(
+        db.func.avg(RecognitionLog.confidence)
+    ).filter_by(face_name=name).scalar() or 0
+
+    first = (
+        RecognitionLog.query.filter_by(face_name=name)
+        .order_by(RecognitionLog.timestamp.asc())
+        .first()
+    )
+    last = q.order_by(RecognitionLog.timestamp.desc()).first()
+    encoding_count = FaceEncoding.query.filter_by(name=name).count()
+    recent = q.order_by(RecognitionLog.timestamp.desc()).limit(20).all()
+
+    return jsonify({
+        "name": name,
+        "total_recognitions": total,
+        "avg_confidence": round(float(avg_conf), 1),
+        "encoding_count": encoding_count,
+        "first_seen": first.timestamp.isoformat(),
+        "last_seen": last.timestamp.isoformat(),
+        "recent_events": [e.to_dict() for e in recent],
+    })
+
+
+@logs_bp.route("/stats/heatmap")
+@api_login_required
+@cache.cached(timeout=60, key_prefix="api_heatmap")
+def get_heatmap():
+    """7×24 matrix of recognition count by (day_of_week, hour) over the last 30 days."""
+    rows = db.session.execute(
+        db.text(
+            "SELECT strftime('%w', timestamp) as dow, strftime('%H', timestamp) as hour, COUNT(*) as cnt "
+            "FROM recognition_logs "
+            "WHERE timestamp >= datetime('now', '-30 days') "
+            "GROUP BY dow, hour"
+        )
+    ).fetchall()
+    matrix = [[0] * 24 for _ in range(7)]
+    for r in rows:
+        matrix[int(r[0])][int(r[1])] = r[2]
+    return jsonify({"matrix": matrix, "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]})
+
+
+@logs_bp.route("/logs/export/xlsx")
+@api_login_required
+def export_logs_xlsx():
+    events = RecognitionLog.query.order_by(RecognitionLog.timestamp.desc()).all()
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Recognition Log"
+    ws.append(["ID", "Name", "Confidence (%)", "Timestamp"])
+    for e in events:
+        ws.append([e.id, e.face_name, e.confidence, e.timestamp.isoformat()])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    resp = make_response(buf.getvalue())
+    resp.headers["Content-Disposition"] = "attachment; filename=recognition_log.xlsx"
+    resp.headers["Content-Type"] = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    return resp
+
+
 @logs_bp.route("/stats")
 @api_login_required
+@cache.cached(timeout=10, key_prefix=STATS_CACHE_KEY)
 def get_stats():
-    cam = get_camera()
     today = date.today()
     today_count = RecognitionLog.query.filter(
         db.func.date(RecognitionLog.timestamp) == today
@@ -91,7 +169,7 @@ def get_stats():
     return jsonify({
         "enrolled_count": enrolled,
         "today_recognitions": today_count,
-        "camera_connected": cam.connected,
+        "camera_connected": camera_is_connected(),
         "hourly": [{"hour": r[0], "count": r[1]} for r in hourly],
         "per_person": [{"name": r[0], "count": r[1]} for r in per_person],
     })

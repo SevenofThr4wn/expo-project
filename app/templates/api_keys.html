@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}API Keys — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">API Keys</h1>
+        <p class="page-subtitle">Keys authenticate external apps to the FaceID REST API.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-ghost btn-sm" id="refreshBtn">Refresh</button>
+        <button class="btn btn-primary btn-sm" id="newKeyBtn">+ Generate Key</button>
+    </div>
+</div>
+
+<!-- Generate key modal -->
+<div id="keyModal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+        <h2 class="modal-title">Generate API Key</h2>
+        <form id="keyForm">
+            <div class="form-group">
+                <label class="form-label">Key name</label>
+                <input type="text" id="keyName" class="input-field" placeholder="e.g. Camera Viewer, CI Bot" maxlength="64" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="cancelKeyBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- One-time key reveal modal -->
+<div id="revealModal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+        <h2 class="modal-title">Your New API Key</h2>
+        <p class="modal-hint">Copy this key now. It will <strong>not</strong> be shown again.</p>
+        <div class="key-reveal-box">
+            <code id="rawKeyDisplay"></code>
+            <button class="btn btn-ghost btn-xs" id="copyKeyBtn">Copy</button>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="closeRevealBtn">Done</button>
+        </div>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Prefix</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Last used</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="keysBody">
+            <tr><td colspan="6" class="empty-row">Loading&hellip;</td></tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadKeys() {
+    const tbody = document.getElementById('keysBody');
+    try {
+        const d = await API.getKeys();
+        const keys = d.keys || [];
+        if (!keys.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No API keys yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = keys.map(k => `
+            <tr>
+                <td><strong>${k.name}</strong></td>
+                <td><code>${k.prefix}…</code></td>
+                <td>
+                    <span class="badge ${k.is_active ? 'badge-success' : 'badge-danger'}">
+                        ${k.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td class="ts">${new Date(k.created_at).toLocaleDateString()}</td>
+                <td class="ts">${k.last_used_at ? new Date(k.last_used_at).toLocaleString() : '—'}</td>
+                <td>
+                    <button class="btn btn-ghost btn-xs toggle-btn" data-id="${k.id}">
+                        ${k.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button class="btn btn-danger btn-xs delete-btn" data-id="${k.id}" data-name="${k.name}">Revoke</button>
+                </td>
+            </tr>
+        `).join('');
+
+        tbody.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const r = await API.toggleKey(btn.dataset.id);
+                if (r.error) { toast(r.error, 'error'); return; }
+                toast(r.message, 'success');
+                loadKeys();
+            });
+        });
+
+        tbody.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm(`Revoke key "${btn.dataset.name}"? Any app using it will lose access.`)) return;
+                const r = await API.deleteKey(btn.dataset.id);
+                if (r.error) { toast(r.error, 'error'); return; }
+                toast(r.message, 'success');
+                loadKeys();
+            });
+        });
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-row">Failed to load keys.</td></tr>';
+    }
+}
+
+// ── Generate modal ────────────────────────────────────────────────────────────
+document.getElementById('newKeyBtn').addEventListener('click', () => {
+    document.getElementById('keyName').value = '';
+    document.getElementById('keyModal').style.display = 'flex';
+});
+
+document.getElementById('cancelKeyBtn').addEventListener('click', () => {
+    document.getElementById('keyModal').style.display = 'none';
+});
+
+document.getElementById('keyForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const r = await API.createKey({ name: document.getElementById('keyName').value.trim() });
+    if (r.error) { toast(typeof r.error === 'string' ? r.error : JSON.stringify(r.error), 'error'); return; }
+    document.getElementById('keyModal').style.display = 'none';
+    document.getElementById('rawKeyDisplay').textContent = r.key.raw_key;
+    document.getElementById('revealModal').style.display = 'flex';
+    loadKeys();
+});
+
+// ── Copy + close reveal ───────────────────────────────────────────────────────
+document.getElementById('copyKeyBtn').addEventListener('click', () => {
+    const text = document.getElementById('rawKeyDisplay').textContent;
+    navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard.', 'success'));
+});
+
+document.getElementById('closeRevealBtn').addEventListener('click', () => {
+    document.getElementById('revealModal').style.display = 'none';
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadKeys);
+loadKeys();
+</script>
+{% endblock %}

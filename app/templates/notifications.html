@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Notifications — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Notifications</h1>
+        <span class="page-subtitle" id="unreadLabel">&mdash;</span>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-ghost btn-sm" id="markAllBtn">Mark all read</button>
+        <button class="btn btn-ghost btn-sm" id="clearBtn">Clear mine</button>
+        <button class="btn btn-ghost btn-sm" id="refreshBtn">Refresh</button>
+        {% if current_user.is_admin %}
+        <button class="btn btn-primary btn-sm" id="newNotifBtn">+ Create</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create notification modal (admin only) -->
+{% if current_user.is_admin %}
+<div id="notifModal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+        <h2 class="modal-title">Create Notification</h2>
+        <form id="notifForm">
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <select id="notifType" class="input-field">
+                    <option value="info">Info</option>
+                    <option value="success">Success</option>
+                    <option value="warn">Warning</option>
+                    <option value="alert">Alert</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" id="notifTitle" class="input-field" placeholder="Notification title" maxlength="128" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Body <span class="form-hint">(optional)</span></label>
+                <textarea id="notifBody" class="input-field" rows="3" placeholder="Additional detail…"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="cancelNotifBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm">Send</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div id="notifList" class="notif-list">
+    <div class="loading-placeholder">Loading&hellip;</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadNotifications() {
+    const list = document.getElementById('notifList');
+    try {
+        const d = await API.getNotifications();
+        const items = d.notifications || [];
+        document.getElementById('unreadLabel').textContent =
+            d.unread === 0 ? 'No unread notifications' : `${d.unread} unread`;
+
+        if (!items.length) {
+            list.innerHTML = '<div class="faces-empty">No notifications.</div>';
+            return;
+        }
+
+        list.innerHTML = items.map(n => `
+            <div class="notif-item ${n.is_read ? 'is-read' : ''} notif-${n.type}" data-id="${n.id}">
+                <div class="notif-icon notif-icon-${n.type}"></div>
+                <div class="notif-content">
+                    <div class="notif-title">${n.title}</div>
+                    ${n.body ? `<div class="notif-body">${n.body}</div>` : ''}
+                    <div class="notif-time">${new Date(n.created_at).toLocaleString()}</div>
+                </div>
+                ${!n.is_read ? `<button class="btn btn-ghost btn-xs mark-read-btn" data-id="${n.id}">Mark read</button>` : ''}
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.mark-read-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await API.markNotificationRead(btn.dataset.id);
+                loadNotifications();
+            });
+        });
+    } catch {
+        list.innerHTML = '<div class="faces-empty">Failed to load notifications.</div>';
+    }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadNotifications);
+
+document.getElementById('markAllBtn').addEventListener('click', async () => {
+    const r = await API.markAllNotificationsRead();
+    toast(r.message, 'success');
+    loadNotifications();
+});
+
+document.getElementById('clearBtn').addEventListener('click', async () => {
+    if (!confirm('Clear all your personal notifications?')) return;
+    const r = await API.clearNotifications();
+    toast(r.message, 'success');
+    loadNotifications();
+});
+
+{% if current_user.is_admin %}
+document.getElementById('newNotifBtn').addEventListener('click', () => {
+    document.getElementById('notifModal').style.display = 'flex';
+});
+
+document.getElementById('cancelNotifBtn').addEventListener('click', () => {
+    document.getElementById('notifModal').style.display = 'none';
+});
+
+document.getElementById('notifForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const r = await API.createNotification({
+        type: document.getElementById('notifType').value,
+        title: document.getElementById('notifTitle').value.trim(),
+        body: document.getElementById('notifBody').value.trim(),
+    });
+    if (r.error) { toast(typeof r.error === 'string' ? r.error : 'Error', 'error'); return; }
+    toast(r.message, 'success');
+    document.getElementById('notifModal').style.display = 'none';
+    document.getElementById('notifForm').reset();
+    loadNotifications();
+});
+{% endif %}
+
+loadNotifications();
+</script>
+{% endblock %}

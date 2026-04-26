@@ -11,13 +11,12 @@
 
 <div class="login-layout" x-data="loginApp()">
 
-    <!-- Camera side -->
-    <div class="login-camera-side">
+    <!-- Camera side — only shown on face-login tab and only when a camera is connected -->
+    <div class="login-camera-side" x-show="tab === 'face' && cameraAvailable" x-transition>
         <div class="login-camera-wrap">
             <img src="/api/video" alt="Camera feed" class="login-feed">
             <div class="live-badge">LIVE</div>
-            <!-- Scan overlay (shown in face-login mode) -->
-            <div class="scan-overlay" x-show="tab === 'face'" x-transition>
+            <div class="scan-overlay" x-transition>
                 <div class="scan-frame">
                     <span class="scan-corner tl"></span>
                     <span class="scan-corner tr"></span>
@@ -87,6 +86,7 @@ function loginApp() {
         loading: false,
         error: '',
         scanning: false,
+        cameraAvailable: false,
         faceStatus: 'Look at the camera to authenticate…',
         _scanInterval: null,
 
@@ -120,7 +120,19 @@ function loginApp() {
             }
         },
 
-        startFaceScan() {
+        async startFaceScan() {
+            this.error = '';
+            this.faceStatus = 'Checking camera…';
+            try {
+                const r = await fetch('/api/snapshot');
+                this.cameraAvailable = r.ok;
+            } catch {
+                this.cameraAvailable = false;
+            }
+            if (!this.cameraAvailable) {
+                this.faceStatus = 'No camera available for face login.';
+                return;
+            }
             this.scanning = true;
             this.faceStatus = 'Scanning… look directly at the camera.';
             this._scanInterval = setInterval(() => this.checkFace(), 1800);
@@ -128,6 +140,7 @@ function loginApp() {
 
         stopFaceScan() {
             this.scanning = false;
+            this.cameraAvailable = false;
             clearInterval(this._scanInterval);
             this._scanInterval = null;
             this.error = '';

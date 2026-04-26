@@ -1,0 +1,61 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  FaceID — Main SCSS Entry Point
+//  SCSS feature 8: Partials via @import
+//  Compile: libsass compiles this at app startup → app/static/css/styles.css
+//  SCSS changes require a server restart to recompile.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// 1. Design tokens (variables + maps) — must be first so everything else has access
+@import 'tokens';
+
+// 2. Mixins, functions, placeholder extends — depend on tokens
+@import 'mixins';
+
+// ── CSS Custom Properties ─────────────────────────────────────────────────────
+// These are emitted as CSS vars so JavaScript can reference them at runtime
+// (e.g. `element.style.color = 'var(--accent)'`).
+// The #{} interpolation resolves SCSS variables to their literal values.
+:root {
+  // Backgrounds
+  --bg-deep:      #{$bg-deep};
+  --bg-base:      #{$bg-base};
+  --bg-elevated:  #{$bg-elevated};
+  --bg-card:      #{$bg-card};
+  --bg-input:     #{$bg-input};
+
+  // Borders
+  --border:       #{$border};
+  --border-hover: #{$border-hover};
+
+  // Accents
+  --accent:       #{$accent};
+  --accent-dim:   #{$accent-dim};
+  --accent-glow:  #{$accent-glow};
+  --accent2:      #{$accent2};
+  --accent3:      #{$accent3};
+
+  // Semantic
+  --success: #{$success};
+  --warn:    #{$warn};
+  --danger:  #{$danger};
+
+  // Text
+  --text-1: #{$text-1};
+  --text-2: #{$text-2};
+  --text-3: #{$text-3};
+
+  // Dimensions (kept as vars so layout JS can read them)
+  --sidebar-w: #{$sidebar-w};
+  --radius:    #{$r-md};
+  --radius-sm: #{$r-sm};
+  --radius-xs: #{$r-xs};
+}
+
+// 3. Global layout shell (body, sidebar, page header)
+@import 'layout';
+
+// 4. Reusable UI components (buttons, cards, badges, tables, toasts)
+@import 'components';
+
+// 5. Page-specific layouts and styles
+@import 'pages';

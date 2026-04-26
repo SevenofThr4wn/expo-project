@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Audit Trail — FaceID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Audit Trail</h1>
+        <span class="page-subtitle" id="auditCountLabel">&mdash;</span>
+    </div>
+    <div class="header-actions">
+        <input type="text" id="actionFilter" class="input-field input-sm" placeholder="Filter action…">
+        <input type="text" id="actorFilter" class="input-field input-sm" placeholder="Filter actor…">
+        <button class="btn btn-ghost btn-sm" id="refreshBtn">Refresh</button>
+        <button class="btn btn-danger btn-sm" id="clearAuditBtn">Clear All</button>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Detail</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody id="auditBody">
+            <tr><td colspan="6" class="empty-row">Loading&hellip;</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination-bar">
+    <button id="prevBtn" class="btn btn-ghost btn-sm" disabled>Previous</button>
+    <span id="pageInfo" class="page-info">Page 1</span>
+    <button id="nextBtn" class="btn btn-ghost btn-sm">Next</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let page = 0;
+const limit = 100;
+let total = 0;
+
+async function loadAudit() {
+    const tbody = document.getElementById('auditBody');
+    const actionF = document.getElementById('actionFilter').value.trim();
+    const actorF = document.getElementById('actorFilter').value.trim();
+
+    const p = new URLSearchParams({ limit, offset: page * limit });
+    if (actionF) p.set('action', actionF);
+    if (actorF) p.set('actor', actorF);
+
+    try {
+        const d = await fetch(`/api/audit?${p}`).then(r => r.json());
+        total = d.total || 0;
+        document.getElementById('auditCountLabel').textContent = `${total} entries`;
+        document.getElementById('pageInfo').textContent =
+            `Page ${page + 1} of ${Math.ceil(total / limit) || 1}`;
+        document.getElementById('prevBtn').disabled = page === 0;
+        document.getElementById('nextBtn').disabled = (page + 1) * limit >= total;
+
+        const entries = d.entries || [];
+        if (!entries.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No audit entries.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = entries.map(e => {
+            const detail = e.detail && Object.keys(e.detail).length
+                ? `<code class="detail-blob">${JSON.stringify(e.detail)}</code>`
+                : '—';
+            return `<tr>
+                <td class="ts">${new Date(e.timestamp).toLocaleString()}</td>
+                <td>${e.actor_name || '<em>system</em>'}</td>
+                <td><span class="action-tag">${e.action}</span></td>
+                <td>${e.target_type ? `${e.target_type}:${e.target_id}` : '—'}</td>
+                <td class="detail-cell">${detail}</td>
+                <td class="ts">${e.ip_address || '—'}</td>
+            </tr>`;
+        }).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-row">Failed to load audit log.</td></tr>';
+    }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => { page = 0; loadAudit(); });
+document.getElementById('prevBtn').addEventListener('click', () => { page--; loadAudit(); });
+document.getElementById('nextBtn').addEventListener('click', () => { page++; loadAudit(); });
+
+document.getElementById('clearAuditBtn').addEventListener('click', async () => {
+    if (!confirm('Permanently clear the entire audit log?')) return;
+    const r = await fetch('/api/audit', { method: 'DELETE' }).then(r => r.json());
+    toast(r.message || 'Cleared.', 'success');
+    page = 0;
+    loadAudit();
+});
+
+let debounce;
+['actionFilter', 'actorFilter'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => { page = 0; loadAudit(); }, 350);
+    });
+});
+
+loadAudit();
+</script>
+{% endblock %}

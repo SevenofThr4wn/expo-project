@@ -1,0 +1,614 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  FaceID Pages — login, dashboard, recognition, enroll, faces, logs,
+//                 users, settings
+//  SCSS feature 6: Nesting throughout all page sections
+//  Requires tokens + mixins already imported.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+.login-layout {
+  display: flex;
+  height: 100vh;
+  background: $bg-deep;
+}
+
+.login-camera-side {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $bg-base;
+  border-right: 1px solid $border;
+  overflow: hidden;
+  padding: $sp-2xl;
+}
+
+.login-camera-wrap {
+  position: relative;
+  border-radius: $r-lg;
+  overflow: hidden;
+  border: 1px solid $border;
+  box-shadow: 0 0 60px rgba($accent, 0.1);
+  width: 100%;
+  max-width: 680px;
+  line-height: 0;
+}
+
+.login-feed { display: block; width: 100%; }
+
+.live-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: $danger;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  padding: 3px 8px;
+  border-radius: $r-xs;
+}
+
+.scan-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.scan-frame {
+  position: relative;
+  width: 42%;
+  aspect-ratio: 1;
+}
+
+.scan-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: $accent;
+  border-style: solid;
+
+  // Nesting: position modifiers for each corner
+  &.tl { top: 0;    left: 0;   border-width: 3px 0 0 3px; }
+  &.tr { top: 0;    right: 0;  border-width: 3px 3px 0 0; }
+  &.bl { bottom: 0; left: 0;   border-width: 0 0 3px 3px; }
+  &.br { bottom: 0; right: 0;  border-width: 0 3px 3px 0; }
+}
+
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, $accent, transparent);
+  animation: scan 2.2s ease-in-out infinite;
+}
+
+@keyframes scan { 0% { top: 0; } 50% { top: calc(100% - 2px); } 100% { top: 0; } }
+
+.login-panel {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $sp-3xl 40px;
+}
+
+.login-logo {
+  width: 58px;
+  height: 58px;
+  background: $accent;
+  border-radius: $r-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.login-title { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+
+.login-tabs {
+  display: flex;
+  border: 1px solid $border;
+  border-radius: $r-sm;
+  overflow: hidden;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.login-tab {
+  flex: 1;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  color: $text-2;
+  cursor: pointer;
+  @include transition(background color);
+  font-family: $font-stack;
+
+  &.active { background: $accent; color: #fff; }
+}
+
+.login-form-wrap { display: flex; flex-direction: column; width: 100%; }
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: $sp-sm;
+  font-size: 13px;
+  color: $text-2;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.login-error { font-size: 13px; color: $danger; margin-top: 8px; text-align: center; }
+
+.scan-ring {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 3px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  @include transition(border-color, 0.3s);
+
+  &.scanning {
+    border-color: $accent;
+    animation: scan-pulse 2s ease-in-out infinite;
+  }
+}
+
+.scan-inner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: $accent-glow;
+}
+
+@keyframes scan-pulse {
+  0%,  100% { box-shadow: 0 0 0 0 rgba($accent, 0.5); }
+  50%        { box-shadow: 0 0 0 16px rgba($accent, 0); }
+}
+
+.login-face-hint { font-size: 13px; color: $text-2; text-align: center; }
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+.dash-grid {
+  padding: $sp-xl $sp-2xl;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  grid-template-rows: auto auto 1fr;
+  gap: 18px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.stat-card-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.stat-card {
+  @include card;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: $accent-glow;
+  border: 1px solid $accent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: $accent;
+
+  svg { width: 20px; height: 20px; }
+
+  // Nesting: colour variant modifiers
+  &.accent2 { background: rgba($accent2, 0.12); border-color: $accent2; color: $accent2; }
+  &.accent3 { background: rgba($accent3, 0.12); border-color: $accent3; color: $accent3; }
+}
+
+.stat-num { font-size: 26px; font-weight: 700; color: $text-1; line-height: 1; }
+.stat-lbl { font-size: 11px; color: $text-3; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+.chart-card    { grid-column: 1; }
+.chart-card-sm { grid-column: 2; }
+.chart-wrap    { height: 220px; position: relative; }
+.events-card   { grid-column: 1 / -1; }
+
+.events-list {
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid $border;
+    animation: slideIn 0.3s ease;
+
+    &:last-child { border-bottom: none; }
+  }
+}
+
+@keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+
+.events-empty { color: $text-3; font-size: 13px; text-align: center; padding: 20px 0 !important; border-bottom: none !important; }
+
+.ev-avatar {
+  @include avatar(28px, 11px);
+  background: $accent-glow;
+  border: 1px solid $accent;
+  color: $accent;
+}
+
+.ev-name { font-size: 13px; font-weight: 500; flex: 1; }
+.ev-conf { font-size: 11px; color: $text-3; }
+.ev-time { font-size: 11px; color: $text-3; }
+
+// ── Recognition page ──────────────────────────────────────────────────────────
+.recognition-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+
+.video-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: $bg-deep;
+  overflow: hidden;
+}
+
+.video-wrap {
+  position: relative;
+  border-radius: $r-md;
+  overflow: hidden;
+  border: 1px solid $border;
+  box-shadow: 0 0 48px rgba($accent, 0.08);
+  line-height: 0;
+
+  img {
+    display: block;
+    width: 100%;
+    max-width: 820px;
+    max-height: calc(100vh - 160px);
+    object-fit: contain;
+  }
+}
+
+.feed-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: $danger;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  padding: 3px 8px;
+  border-radius: $r-xs;
+}
+
+.camera-notice-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+  background: $bg-deep;
+  overflow: hidden;
+}
+
+.camera-notice-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: $bg-card;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-3;
+}
+
+.camera-notice-title { font-size: 15px; font-weight: 600; color: $text-2; text-align: center; }
+.camera-notice-hint {
+  font-size: 12px;
+  color: $text-3;
+  text-align: center;
+
+  code {
+    background: $bg-card;
+    border: 1px solid $border;
+    padding: 1px 6px;
+    border-radius: $r-xs;
+    font-size: 11px;
+    color: $accent;
+    font-family: $mono-stack;
+  }
+}
+
+.recog-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: $bg-base;
+  border-left: 1px solid $border;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recent-list { list-style: none; }
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 0;
+  border-bottom: 1px solid $border;
+  animation: slideIn 0.3s ease;
+
+  &:last-child { border-bottom: none; }
+}
+
+.recent-empty { font-size: 12px; color: $text-3; padding: 10px 0; text-align: center; }
+
+.recent-avatar {
+  @include avatar(28px, 11px);
+  background: $accent-glow;
+  border: 1px solid $accent;
+  color: $accent;
+}
+
+.recent-name {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  @extend %truncate;
+}
+
+.recent-conf { font-size: 11px; color: $text-3; }
+
+.session-stats { display: flex; flex-direction: column; gap: $sp-sm; }
+.ss-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+.ss-lbl  { color: $text-3; }
+.ss-val  { font-weight: 600; }
+.ss-name { color: $accent; }
+
+// ── Enroll page ───────────────────────────────────────────────────────────────
+.enroll-layout {
+  display: flex;
+  gap: 20px;
+  padding: $sp-xl $sp-2xl;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.enroll-camera-col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.enroll-form-col   { width: 360px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.quality-bar-wrap { display: flex; align-items: center; gap: 10px; }
+.quality-lbl      { font-size: 12px; color: $text-3; white-space: nowrap; }
+.quality-track    { flex: 1; height: 6px; background: $bg-elevated; border-radius: 3px; overflow: hidden; }
+.quality-fill     { height: 100%; border-radius: 3px; @include transition(width, 0.4s, ease); }
+.quality-score    { font-size: 12px; font-weight: 600; width: 34px; text-align: right; }
+
+.capture-controls { display: flex; align-items: center; gap: $sp-sm; flex-wrap: wrap; margin-bottom: 12px; }
+.captures-row     { display: flex; flex-wrap: wrap; gap: $sp-sm; margin-bottom: 10px; }
+
+.capture-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: $r-sm;
+  overflow: hidden;
+  border: 1px solid $border;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-quality {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+}
+
+.capture-count { font-size: 12px; color: $text-2; margin-bottom: $sp-sm; }
+
+.progress-wrap  { margin: 6px 0; }
+.progress-text  { font-size: 12px; color: $text-2; margin-bottom: 6px; }
+.progress-track { width: 100%; height: 5px; background: $bg-elevated; border-radius: 3px; overflow: hidden; }
+.progress-fill  { height: 100%; background: $accent; border-radius: 3px; @include transition(width, 0.35s, ease); }
+
+// ── Faces page ────────────────────────────────────────────────────────────────
+.faces-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  padding: $sp-xl $sp-2xl;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.face-card {
+  @include card(20px 14px 14px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $sp-sm;
+  text-align: center;
+  @include transition(border-color);
+
+  &:hover { border-color: $border-hover; }
+}
+
+.face-avatar {
+  @include avatar(54px, 22px);
+  background: $accent-glow;
+  border: 2px solid $accent;
+  color: $accent;
+}
+
+.face-name      { font-size: 13px; font-weight: 600; word-break: break-word; }
+.face-encodings { font-size: 11px; color: $text-3; }
+
+.face-quality-bar  { width: 100%; height: 5px; background: $bg-elevated; border-radius: 3px; overflow: hidden; }
+.face-quality-fill { height: 100%; border-radius: 3px; @include transition(width, 0.4s); }
+
+.faces-empty {
+  grid-column: 1/-1;
+  text-align: center;
+  color: $text-3;
+  padding: 60px 24px;
+  font-size: 14px;
+
+  a { color: $accent; }
+}
+
+.loading-placeholder { grid-column: 1/-1; color: $text-3; text-align: center; padding: 40px; }
+
+// ── Logs page ─────────────────────────────────────────────────────────────────
+.table-wrap { padding: 0 $sp-2xl 24px; overflow-x: auto; }
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px $sp-2xl;
+  border-top: 1px solid $border;
+  flex-shrink: 0;
+}
+
+.page-info { font-size: 12px; color: $text-3; }
+
+// ── Users page ────────────────────────────────────────────────────────────────
+.users-layout { padding: $sp-xl $sp-2xl; overflow-y: auto; }
+
+// ── Settings page ─────────────────────────────────────────────────────────────
+.settings-layout {
+  padding: $sp-xl $sp-2xl;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-section-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.setting-label { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+.setting-hint  { font-size: 12px; color: $text-3; }
+
+.slider-group { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.slider       { width: 130px; accent-color: $accent; cursor: pointer; }
+.slider-val   { font-size: 13px; font-weight: 600; color: $accent; min-width: 36px; text-align: right; }
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  cursor: pointer;
+
+  input { opacity: 0; width: 0; height: 0; }
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: $r-full;
+  background: $bg-elevated;
+  border: 1px solid $border;
+  @include transition(background border-color, 0.2s);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: $text-3;
+    @include transition(left background, 0.2s);
+  }
+}
+
+.toggle input:checked + .toggle-track {
+  background: $accent-glow;
+  border-color: $accent;
+
+  &::after { left: 21px; background: $accent; }
+}
+
+.camera-row        { display: flex; align-items: center; gap: $sp-sm; margin-bottom: 10px; }
+.camera-select     { flex: 1; margin-bottom: 0 !important; cursor: pointer; }
+.camera-status-row { display: flex; align-items: center; gap: $sp-sm; min-height: 20px; margin-top: 2px; }
+
+.danger-zone {
+  border-color: rgba($danger, 0.3);
+
+  // Nesting: child title colour in danger zone context
+  .settings-section-title { color: $danger; }
+}
