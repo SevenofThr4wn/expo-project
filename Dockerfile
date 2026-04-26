@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Install Dart Sass (standalone binary) ───────────────────
+# ── Sass ─────────────────────────────────────────────────────
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="x64"; \
     elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; \
@@ -30,19 +30,18 @@ RUN ARCH=$(uname -m) && \
     ln -s /opt/dart-sass/sass /usr/local/bin/sass && \
     rm dart-sass.tar.gz
 
-# ── Python deps ─────────────────────────────────────────────
+# ── Python deps (CACHED) ────────────────────────────────────
 COPY requirements.txt .
 
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-# ── App files ───────────────────────────────────────────────
+# ── App ──────────────────────────────────────────────────────
 COPY . .
 
-# ── Compile SCSS at build time ──────────────────────────────
 RUN sass app/static/scss/styles.scss app/static/css/styles.css --style=compressed
 
-# ── Non-root user ───────────────────────────────────────────
+# ── Runtime user ────────────────────────────────────────────
 RUN useradd -m appuser
 USER appuser
 
