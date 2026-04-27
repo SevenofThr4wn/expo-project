@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: johneley/johns-private-repo
+  IMAGE_NAME: johneley/johns-docker-repo
 
 jobs:
   build:
