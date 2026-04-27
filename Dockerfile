@@ -1,5 +1,5 @@
 # ── Builder ───────────────────────────────────────────────
-FROM --platform=linux/arm64 python:3.12-slim AS builder
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ RUN pip install --upgrade pip \
 
 
 # ── Runtime ───────────────────────────────────────────────
-FROM --platform=linux/arm64 python:3.12-slim
+FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -41,7 +41,7 @@ RUN ARCH=$(uname -m) && \
     ln -s /opt/dart-sass/sass /usr/local/bin/sass && \
     rm sass.tar.gz
 
-# copy prebuilt python packages (NO COMPILING HERE)
+# copy prebuilt python packages
 COPY --from=builder /install /usr/local
 
 COPY . .
